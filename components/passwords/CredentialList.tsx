@@ -32,7 +32,7 @@ export function CredentialList({
   if (loading && allCredentials.length === 0) {
     return (
       <div className="space-y-3" aria-label="Cargando cuentas">
-        {[0, 1, 2].map((item) => <div key={item} className="h-48 animate-pulse rounded-[24px] border border-[#eadfd4] bg-white/65" />)}
+        {[0, 1, 2].map((item) => <div key={item} className="h-24 animate-pulse rounded-[18px] border border-[#eadfd4] bg-white/65" />)}
       </div>
     );
   }
@@ -55,7 +55,7 @@ export function CredentialList({
   }
 
   return (
-    <section aria-label="Todas las cuentas" className="space-y-3.5">
+    <section aria-label="Todas las cuentas" className="space-y-2">
       {credentials.map((credential) => (
         <CredentialCard
           key={credential.id}

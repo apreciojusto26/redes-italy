@@ -1,23 +1,23 @@
 interface CredentialAppearance {
-  icon: string;
+  key: string | null;
   accent: string;
   soft: string;
 }
 
 const appearances: Record<string, CredentialAppearance> = {
-  google: { icon: "G", accent: "#4285f4", soft: "#edf4ff" },
-  gmail: { icon: "M", accent: "#d84b40", soft: "#fff0ee" },
-  temu: { icon: "T", accent: "#e85d12", soft: "#fff0e7" },
-  instagram: { icon: "◎", accent: "#b33c80", soft: "#fceef6" },
-  vercel: { icon: "▲", accent: "#241c18", soft: "#f0ece9" },
-  sumup: { icon: "S", accent: "#1b8269", soft: "#e9f7f2" },
-  payoneer: { icon: "P", accent: "#d55525", soft: "#fff0e8" },
-  hotmart: { icon: "H", accent: "#e35d32", soft: "#fff0ea" },
-  amazon: { icon: "a", accent: "#c57914", soft: "#fff4df" },
-  tiktok: { icon: "♪", accent: "#251d19", soft: "#f0ece9" },
-  facebook: { icon: "f", accent: "#2877d4", soft: "#edf5ff" },
-  github: { icon: "GH", accent: "#332922", soft: "#f0ece9" },
-  hostinger: { icon: "H", accent: "#673de6", soft: "#f1edff" },
+  google: { key: "google", accent: "#4285f4", soft: "#edf4ff" },
+  gmail: { key: "gmail", accent: "#d84b40", soft: "#fff0ee" },
+  temu: { key: "temu", accent: "#e85d12", soft: "#fff0e7" },
+  instagram: { key: "instagram", accent: "#b33c80", soft: "#fceef6" },
+  vercel: { key: "vercel", accent: "#241c18", soft: "#f0ece9" },
+  sumup: { key: "sumup", accent: "#1b8269", soft: "#e9f7f2" },
+  payoneer: { key: "payoneer", accent: "#d55525", soft: "#fff0e8" },
+  hotmart: { key: "hotmart", accent: "#e35d32", soft: "#fff0ea" },
+  amazon: { key: "amazon", accent: "#c57914", soft: "#fff4df" },
+  tiktok: { key: "tiktok", accent: "#251d19", soft: "#f0ece9" },
+  facebook: { key: "facebook", accent: "#2877d4", soft: "#edf5ff" },
+  github: { key: "github", accent: "#332922", soft: "#f0ece9" },
+  hostinger: { key: "hostinger", accent: "#673de6", soft: "#f1edff" },
 };
 
 function normalize(value: string): string {
@@ -29,9 +29,8 @@ export function getCredentialAppearance(name: string, platform: string): Credent
   const match = Object.keys(appearances).find((key) => searchable.includes(key));
   if (match) return appearances[match];
 
-  const label = (platform || name || "Cuenta").trim();
   return {
-    icon: label.slice(0, 2).toUpperCase(),
+    key: null,
     accent: "#d86128",
     soft: "#fff0e7",
   };
