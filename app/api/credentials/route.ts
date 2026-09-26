@@ -1,6 +1,7 @@
 import { NextRequest, NextResponse } from "next/server";
+import { inferCredentialProvider } from "@/config/credential-platforms";
 import { getTurso, TursoConfigurationError } from "@/lib/turso";
-import type { Credential, CredentialPayload, LoginMethod } from "@/types/credential";
+import type { Credential, CredentialPayload, CredentialProvider, LoginMethod } from "@/types/credential";
 
 export const runtime = "nodejs";
 export const dynamic = "force-dynamic";
@@ -42,6 +43,7 @@ function isCredentialPayload(value: unknown): value is CredentialPayload {
     stringWithin(item.platform, 160) &&
     stringWithin(item.category, 160) &&
     stringWithin(item.url, 2048) && validWebUrl(item.url) &&
+    (item.provider === undefined || item.provider === null || item.provider === "google") &&
     typeof item.loginMethod === "string" && loginMethods.has(item.loginMethod as LoginMethod) &&
     stringWithin(item.email, 320) &&
     stringWithin(item.username, 320) &&
@@ -55,6 +57,7 @@ function isCredentialPayload(value: unknown): value is CredentialPayload {
     ((item.encryptedPassword === null && item.passwordIv === null) ||
       (Boolean(item.encryptedPassword) && Boolean(item.passwordIv))) &&
     (item.loginMethod !== "password" || Boolean(item.encryptedPassword && item.passwordIv)) &&
+    (item.provider == null || item.loginMethod === "password") &&
     (item.loginMethod !== "other" || item.accessInstructions.trim().length > 0) &&
     ((item.loginMethod !== "email_code" && item.loginMethod !== "magic_link") || item.email.trim().length > 0)
   );
@@ -67,6 +70,7 @@ function rowToCredential(row: Record<string, unknown>): Credential {
     platform: String(row.platform),
     category: String(row.category),
     url: String(row.url),
+    provider: row.provider === "google" ? "google" : null,
     loginMethod: String(row.login_method) as LoginMethod,
     email: String(row.email),
     username: String(row.username),
@@ -91,6 +95,35 @@ async function findCredential(id: string) {
   return result.rows[0] ? rowToCredential(result.rows[0] as Record<string, unknown>) : null;
 }
 
+function resolvedProvider(payload: CredentialPayload): CredentialProvider {
+  if (payload.loginMethod !== "password") return null;
+  return payload.provider ?? inferCredentialProvider(payload.platform, payload.url);
+}
+
+async function findDuplicateGoogleCredential(email: string, excludingId?: string): Promise<Credential | null> {
+  const normalizedEmail = email.trim().toLocaleLowerCase("es");
+  if (!normalizedEmail) return null;
+
+  const database = await getTurso();
+  const result = await database.execute({
+    sql: `SELECT * FROM credentials
+      WHERE provider = 'google'
+        AND lower(trim(email)) = ?
+        AND (? IS NULL OR id <> ?)
+      ORDER BY created_at
+      LIMIT 1`,
+    args: [normalizedEmail, excludingId ?? null, excludingId ?? null],
+  });
+  return result.rows[0] ? rowToCredential(result.rows[0] as Record<string, unknown>) : null;
+}
+
+function duplicateGoogleResponse(existingCredential: Credential) {
+  return NextResponse.json({
+    error: "Esta cuenta Google ya está guardada.",
+    existingCredential,
+  }, { status: 409 });
+}
+
 async function validateRelations(payload: CredentialPayload): Promise<string | null> {
   const relationIds = [payload.loginCredentialId, payload.emailCredentialId].filter(Boolean) as string[];
   if (relationIds.includes(payload.id)) return "Una cuenta no puede relacionarse consigo misma.";
@@ -102,15 +135,13 @@ async function validateRelations(payload: CredentialPayload): Promise<string | n
   const database = await getTurso();
   const placeholders = relationIds.map(() => "?").join(",");
   const result = await database.execute({
-    sql: `SELECT id, name, platform, url, login_method FROM credentials WHERE id IN (${placeholders})`,
+    sql: `SELECT id, provider, login_method FROM credentials WHERE id IN (${placeholders})`,
     args: relationIds,
   });
   if (result.rows.length !== new Set(relationIds).size) return "La credencial relacionada no existe.";
 
-  const isCompatibleGoogle = (row: Record<string, unknown>) => {
-    const searchable = `${row.name} ${row.platform} ${row.url}`.toLocaleLowerCase("es");
-    return row.login_method === "password" && (searchable.includes("google") || searchable.includes("gmail"));
-  };
+  const isCompatibleGoogle = (row: Record<string, unknown>) =>
+    row.login_method === "password" && row.provider === "google";
 
   if (payload.loginCredentialId) {
     const target = result.rows.find((row) => String(row.id) === payload.loginCredentialId);
@@ -154,23 +185,40 @@ export async function POST(request: NextRequest) {
   if (!payload) return NextResponse.json({ error: "Datos de credencial no válidos." }, { status: 400 });
 
   try {
-    const relationError = await validateRelations(payload);
+    const normalizedPayload = { ...payload, provider: resolvedProvider(payload) };
+    const relationError = await validateRelations(normalizedPayload);
     if (relationError) return NextResponse.json({ error: relationError }, { status: 400 });
+    if (normalizedPayload.provider === "google") {
+      const duplicate = await findDuplicateGoogleCredential(normalizedPayload.email);
+      if (duplicate) return duplicateGoogleResponse(duplicate);
+    }
     const database = await getTurso();
-    await database.execute({
+    const insertArgs = [
+      normalizedPayload.id, normalizedPayload.name.trim(), normalizedPayload.platform.trim(), normalizedPayload.category.trim(), normalizedPayload.url.trim(),
+      normalizedPayload.provider, normalizedPayload.loginMethod, normalizedPayload.email.trim(), normalizedPayload.username.trim(), normalizedPayload.encryptedPassword,
+      normalizedPayload.passwordIv, normalizedPayload.loginCredentialId, normalizedPayload.emailCredentialId,
+      normalizedPayload.accessInstructions.trim(), normalizedPayload.notes.trim(), normalizedPayload.favorite ? 1 : 0,
+    ];
+    const protectsGoogleIdentity = normalizedPayload.provider === "google" && Boolean(normalizedPayload.email.trim());
+    const insertResult = await database.execute({
       sql: `INSERT INTO credentials (
-        id, name, platform, category, url, login_method, email, username,
-        encrypted_password, password_iv, login_credential_id, email_credential_id,
-        access_instructions, notes, favorite
-      ) VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)`,
-      args: [
-        payload.id, payload.name.trim(), payload.platform.trim(), payload.category.trim(), payload.url.trim(),
-        payload.loginMethod, payload.email.trim(), payload.username.trim(), payload.encryptedPassword,
-        payload.passwordIv, payload.loginCredentialId, payload.emailCredentialId,
-        payload.accessInstructions.trim(), payload.notes.trim(), payload.favorite ? 1 : 0,
-      ],
+          id, name, platform, category, url, provider, login_method, email, username,
+          encrypted_password, password_iv, login_credential_id, email_credential_id,
+          access_instructions, notes, favorite
+        )
+        ${protectsGoogleIdentity
+          ? "SELECT ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ? WHERE NOT EXISTS (SELECT 1 FROM credentials WHERE provider = 'google' AND lower(trim(email)) = ?)"
+          : "VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)"}`,
+      args: protectsGoogleIdentity
+        ? [...insertArgs, normalizedPayload.email.trim().toLocaleLowerCase("es")]
+        : insertArgs,
     });
-    return NextResponse.json({ credential: await findCredential(payload.id) }, { status: 201 });
+    if (protectsGoogleIdentity && insertResult.rowsAffected === 0) {
+      const duplicate = await findDuplicateGoogleCredential(normalizedPayload.email);
+      if (duplicate) return duplicateGoogleResponse(duplicate);
+      return NextResponse.json({ error: "No se pudo guardar la cuenta Google." }, { status: 409 });
+    }
+    return NextResponse.json({ credential: await findCredential(normalizedPayload.id) }, { status: 201 });
   } catch (error) {
     return databaseError(error);
   }
@@ -183,24 +231,33 @@ export async function PUT(request: NextRequest) {
   try {
     const existing = await findCredential(payload.id);
     if (!existing) return NextResponse.json({ error: "La credencial no existe." }, { status: 404 });
-    const relationError = await validateRelations(payload);
+    const normalizedPayload = { ...payload, provider: resolvedProvider(payload) };
+    const relationError = await validateRelations(normalizedPayload);
     if (relationError) return NextResponse.json({ error: relationError }, { status: 400 });
+    const googleIdentityChanged = normalizedPayload.provider === "google" && (
+      existing.provider !== "google" ||
+      existing.email.trim().toLocaleLowerCase("es") !== normalizedPayload.email.trim().toLocaleLowerCase("es")
+    );
+    if (googleIdentityChanged) {
+      const duplicate = await findDuplicateGoogleCredential(normalizedPayload.email, normalizedPayload.id);
+      if (duplicate) return duplicateGoogleResponse(duplicate);
+    }
 
     const database = await getTurso();
     await database.execute({
       sql: `UPDATE credentials SET
-        name = ?, platform = ?, category = ?, url = ?, login_method = ?, email = ?, username = ?,
+        name = ?, platform = ?, category = ?, url = ?, provider = ?, login_method = ?, email = ?, username = ?,
         encrypted_password = ?, password_iv = ?, login_credential_id = ?, email_credential_id = ?,
         access_instructions = ?, notes = ?, favorite = ?, updated_at = CURRENT_TIMESTAMP
         WHERE id = ?`,
       args: [
-        payload.name.trim(), payload.platform.trim(), payload.category.trim(), payload.url.trim(),
-        payload.loginMethod, payload.email.trim(), payload.username.trim(), payload.encryptedPassword,
-        payload.passwordIv, payload.loginCredentialId, payload.emailCredentialId,
-        payload.accessInstructions.trim(), payload.notes.trim(), payload.favorite ? 1 : 0, payload.id,
+        normalizedPayload.name.trim(), normalizedPayload.platform.trim(), normalizedPayload.category.trim(), normalizedPayload.url.trim(),
+        normalizedPayload.provider, normalizedPayload.loginMethod, normalizedPayload.email.trim(), normalizedPayload.username.trim(), normalizedPayload.encryptedPassword,
+        normalizedPayload.passwordIv, normalizedPayload.loginCredentialId, normalizedPayload.emailCredentialId,
+        normalizedPayload.accessInstructions.trim(), normalizedPayload.notes.trim(), normalizedPayload.favorite ? 1 : 0, normalizedPayload.id,
       ],
     });
-    return NextResponse.json({ credential: await findCredential(payload.id) });
+    return NextResponse.json({ credential: await findCredential(normalizedPayload.id) });
   } catch (error) {
     return databaseError(error);
   }

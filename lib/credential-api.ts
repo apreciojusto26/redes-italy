@@ -2,9 +2,16 @@ import type { Credential, CredentialPayload, VaultConfiguration } from "@/types/
 
 async function responseError(response: Response): Promise<Error> {
   try {
-    const body = (await response.json()) as { error?: string; dependencies?: Credential[] };
+    const body = (await response.json()) as {
+      error?: string;
+      dependencies?: Credential[];
+      existingCredential?: Credential;
+    };
     const error = new Error(body.error ?? "No se pudo completar la operación.");
-    Object.assign(error, { dependencies: body.dependencies });
+    Object.assign(error, {
+      dependencies: body.dependencies,
+      existingCredential: body.existingCredential,
+    });
     return error;
   } catch {
     return new Error("No se pudo completar la operación.");

@@ -27,8 +27,8 @@ function getClient(): Client {
 export async function getTurso(): Promise<Client> {
   const client = getClient();
 
-  schemaPromise ??= client
-    .batch([
+  schemaPromise ??= (async () => {
+    await client.batch([
       `CREATE TABLE IF NOT EXISTS publication_checks (
           date_key TEXT NOT NULL,
           platform_id TEXT NOT NULL,
@@ -52,6 +52,7 @@ export async function getTurso(): Promise<Client> {
           platform TEXT NOT NULL DEFAULT '',
           category TEXT NOT NULL DEFAULT '',
           url TEXT NOT NULL DEFAULT '',
+          provider TEXT,
           login_method TEXT NOT NULL,
           email TEXT NOT NULL DEFAULT '',
           username TEXT NOT NULL DEFAULT '',
@@ -70,8 +71,36 @@ export async function getTurso(): Promise<Client> {
       "CREATE INDEX IF NOT EXISTS credentials_name_idx ON credentials(name)",
       "CREATE INDEX IF NOT EXISTS credentials_login_relation_idx ON credentials(login_credential_id)",
       "CREATE INDEX IF NOT EXISTS credentials_email_relation_idx ON credentials(email_credential_id)",
-    ], "write")
-    .then(() => undefined);
+    ], "write");
+
+    const credentialColumns = await client.execute("PRAGMA table_info(credentials)");
+    const hasProvider = credentialColumns.rows.some((row) => String(row.name) === "provider");
+    if (!hasProvider) {
+      try {
+        await client.execute("ALTER TABLE credentials ADD COLUMN provider TEXT");
+      } catch (error) {
+        const message = error instanceof Error ? error.message.toLocaleLowerCase("es") : "";
+        if (!message.includes("duplicate column")) throw error;
+      }
+    }
+
+    await client.batch([
+      {
+        sql: `UPDATE credentials
+          SET provider = 'google'
+          WHERE provider IS NULL
+            AND login_method = 'password'
+            AND (
+              lower(trim(platform)) IN ('google', 'gmail', 'google / gmail', 'google/gmail', 'cuenta google', 'google workspace')
+              OR lower(trim(name)) IN ('google', 'gmail', 'google / gmail', 'cuenta google')
+              OR lower(url) LIKE '%mail.google.com%'
+              OR lower(url) LIKE '%accounts.google.com%'
+            )`,
+        args: [],
+      },
+      "CREATE INDEX IF NOT EXISTS credentials_provider_idx ON credentials(provider)",
+    ], "write");
+  })();
 
   await schemaPromise;
   return client;

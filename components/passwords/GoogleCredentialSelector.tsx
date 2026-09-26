@@ -43,10 +43,13 @@ export function GoogleCredentialSelector({ credentials, value, onChange, optiona
         </div>
       )}
 
-      <button type="button" onClick={onAdd} className="mt-2 inline-flex min-h-11 items-center gap-2 rounded-xl px-2 text-sm font-extrabold text-[#d85a20] transition hover:bg-[#fff2e9]">
-        <Plus aria-hidden="true" className="size-4" />
-        Añadir cuenta Google
-      </button>
+      <div className="mt-4 border-t border-[#eee4dc] pt-3">
+        <p className="text-xs font-bold text-[#927f73]">¿No está guardada?</p>
+        <button type="button" onClick={onAdd} className="mt-1 inline-flex min-h-10 cursor-pointer items-center gap-2 rounded-xl px-2 text-sm font-extrabold text-[#d85a20] transition hover:bg-[#fff2e9]">
+          <Plus aria-hidden="true" className="size-4" />
+          Crear nueva cuenta Google
+        </button>
+      </div>
     </div>
   );
 }

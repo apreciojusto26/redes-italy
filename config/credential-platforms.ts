@@ -1,3 +1,5 @@
+import type { CredentialProvider } from "@/types/credential";
+
 interface CredentialAppearance {
   key: string | null;
   accent: string;
@@ -36,7 +38,25 @@ export function getCredentialAppearance(name: string, platform: string): Credent
   };
 }
 
-export function isGoogleCredential(name: string, platform: string, url: string): boolean {
-  const searchable = `${normalize(name)} ${normalize(platform)} ${normalize(url)}`;
-  return searchable.includes("google") || searchable.includes("gmail");
+export function inferCredentialProvider(platform: string, url: string): CredentialProvider {
+  const normalizedPlatform = normalize(platform).replace(/\s+/g, " ");
+  const googlePlatforms = new Set([
+    "google",
+    "gmail",
+    "google / gmail",
+    "google/gmail",
+    "cuenta google",
+    "google workspace",
+  ]);
+
+  if (googlePlatforms.has(normalizedPlatform)) return "google";
+
+  try {
+    const hostname = new URL(url).hostname.toLocaleLowerCase("es");
+    if (hostname === "google.com" || hostname.endsWith(".google.com")) return "google";
+  } catch {
+    // Una URL incompleta no debe impedir guardar el formulario.
+  }
+
+  return null;
 }

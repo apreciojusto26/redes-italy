@@ -1,4 +1,5 @@
 export type LoginMethod = "password" | "google" | "email_code" | "magic_link" | "other";
+export type CredentialProvider = "google" | null;
 
 export interface Credential {
   id: string;
@@ -6,6 +7,7 @@ export interface Credential {
   platform: string;
   category: string;
   url: string;
+  provider: CredentialProvider;
   loginMethod: LoginMethod;
   email: string;
   username: string;
@@ -25,6 +27,7 @@ export interface CredentialDraft {
   platform: string;
   category: string;
   url: string;
+  provider: CredentialProvider;
   loginMethod: LoginMethod;
   email: string;
   username: string;

@@ -10,7 +10,6 @@ import { PasswordSearch } from "@/components/passwords/PasswordSearch";
 import { PasswordsHeader } from "@/components/passwords/PasswordsHeader";
 import { Toast } from "@/components/passwords/Toast";
 import { VaultUnlock } from "@/components/passwords/VaultUnlock";
-import { isGoogleCredential } from "@/config/credential-platforms";
 import { useCredentials } from "@/hooks/useCredentials";
 import { useVault } from "@/hooks/useVault";
 import type { Credential, CredentialDraft, ImportedCredential } from "@/types/credential";
@@ -30,6 +29,7 @@ function importedDraft(item: ImportedCredential): CredentialDraft {
     platform: item.name,
     category: "Importada",
     url: item.url,
+    provider: null,
     loginMethod: "password",
     email: hasEmail ? item.username : "",
     username: hasEmail ? "" : item.username,
@@ -66,8 +66,7 @@ export function PasswordsPage() {
 
   const googleCredentials = useMemo(
     () => credentialsState.credentials.filter((credential) =>
-      credential.loginMethod === "password" &&
-      isGoogleCredential(credential.name, credential.platform, credential.url)),
+      credential.loginMethod === "password" && credential.provider === "google"),
     [credentialsState.credentials],
   );
 
@@ -82,6 +81,7 @@ export function PasswordsPage() {
             credential.platform,
             credential.category,
             credential.url,
+            credential.provider,
             credential.email,
             credential.username,
             credential.notes,
@@ -91,6 +91,7 @@ export function PasswordsPage() {
             loginCredential?.email,
             loginCredential?.username,
             loginCredential?.url,
+            loginCredential?.provider,
             loginCredential?.category,
             loginCredential?.notes,
             emailCredential?.name,
@@ -98,6 +99,7 @@ export function PasswordsPage() {
             emailCredential?.email,
             emailCredential?.username,
             emailCredential?.url,
+            emailCredential?.provider,
             emailCredential?.category,
             emailCredential?.notes,
           ].filter(Boolean).join(" ");
@@ -142,10 +144,11 @@ export function PasswordsPage() {
 
   const createGoogle = async (email: string, password: string) => {
     const created = await credentialsState.create({
-      name: "Google",
-      platform: "Google",
+      name: "Google / Gmail",
+      platform: "Google / Gmail",
       category: "Correo",
       url: "https://mail.google.com/",
+      provider: "google",
       loginMethod: "password",
       email,
       username: "",
