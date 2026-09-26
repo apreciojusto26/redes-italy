@@ -6,7 +6,7 @@ import { DailyProgress } from "@/components/DailyProgress";
 import { Header } from "@/components/Header";
 import { History } from "@/components/History";
 import { PlatformCard } from "@/components/PlatformCard";
-import { PasswordsPlaceholder } from "@/components/PasswordsPlaceholder";
+import { PasswordsPage } from "@/components/passwords/PasswordsPage";
 import { ResetDayDialog } from "@/components/ResetDayDialog";
 import { SectionSwitcher, type AppSection } from "@/components/SectionSwitcher";
 import { dailyPublicationTotal, platforms } from "@/config/platforms";
@@ -52,8 +52,7 @@ export function Dashboard() {
       <div className="space-y-4 sm:space-y-5">
         <SectionSwitcher activeSection={activeSection} onChange={setActiveSection} />
 
-        {activeSection === "social" ? (
-          <>
+        <div className={activeSection === "social" ? "space-y-4 sm:space-y-5" : "hidden"}>
             <Header selectedDate={selectedDate} onReset={() => setResetDialogOpen(true)} />
             <DailyProgress completed={summary.completed} total={dailyPublicationTotal} percentage={summary.percentage} />
 
@@ -81,10 +80,11 @@ export function Dashboard() {
               )}
               {syncMessages[syncStatus]}
             </footer>
-          </>
-        ) : (
-          <PasswordsPlaceholder />
-        )}
+        </div>
+
+        <div className={activeSection === "passwords" ? "block" : "hidden"}>
+          <PasswordsPage />
+        </div>
       </div>
 
       <ResetDayDialog open={resetDialogOpen} dateKey={selectedDate} onCancel={closeResetDialog} onConfirm={confirmReset} />
