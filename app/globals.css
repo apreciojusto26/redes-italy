@@ -1,0 +1,73 @@
+@import "tailwindcss";
+
+:root {
+  --background: #faf7f1;
+  --foreground: #261c17;
+  --muted: #7a6a61;
+  --line: #eadfd4;
+  --accent: #ed6725;
+}
+
+* {
+  box-sizing: border-box;
+}
+
+html {
+  min-width: 320px;
+  background: var(--background);
+  scroll-behavior: smooth;
+}
+
+body {
+  min-height: 100vh;
+  margin: 0;
+  color: var(--foreground);
+  background:
+    radial-gradient(circle at 8% -5%, rgb(241 132 32 / 9%), transparent 27rem),
+    radial-gradient(circle at 100% 35%, rgb(233 91 32 / 5%), transparent 32rem),
+    var(--background);
+  font-family: "Manrope Variable", ui-sans-serif, system-ui, sans-serif;
+}
+
+button,
+input {
+  font: inherit;
+}
+
+button {
+  -webkit-tap-highlight-color: transparent;
+}
+
+button:not(:disabled),
+a[href],
+[role="button"]:not([aria-disabled="true"]),
+[role="checkbox"]:not([aria-disabled="true"]) {
+  cursor: pointer;
+}
+
+button:disabled,
+[aria-disabled="true"] {
+  cursor: not-allowed;
+}
+
+button:focus-visible,
+[role="checkbox"]:focus-visible {
+  outline: 3px solid rgb(237 103 37 / 26%);
+  outline-offset: 3px;
+}
+
+::selection {
+  color: #fff;
+  background: #ed6725;
+}
+
+@media (prefers-reduced-motion: reduce) {
+  *,
+  *::before,
+  *::after {
+    scroll-behavior: auto !important;
+    transition-duration: 0.01ms !important;
+    animation-duration: 0.01ms !important;
+    animation-iteration-count: 1 !important;
+  }
+}
