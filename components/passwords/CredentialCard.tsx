@@ -234,7 +234,7 @@ export function CredentialCard({
           )}
 
           <span aria-hidden="true" className="hidden h-5 w-px shrink-0 bg-[#e5e7eb] md:block" />
-          <span className="inline-flex min-h-8 shrink-0 items-center gap-2 rounded-[9px] border border-[#d1d5db] bg-white px-2.5 text-[11px] font-extrabold text-[#6b7280] shadow-[0_2px_8px_rgba(17,24,39,0.035)]">
+          <span className="inline-flex min-h-8 shrink-0 items-center gap-2 rounded-full border border-[#d1d5db] bg-white px-2.5 text-[11px] font-extrabold text-[#6b7280] shadow-[0_2px_8px_rgba(17,24,39,0.035)]">
             <span className="grid size-5 place-items-center rounded-md bg-[#f3f4f6] text-[#6b7280]">
               <MethodIcon aria-hidden="true" className="size-3" />
             </span>

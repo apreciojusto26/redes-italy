@@ -16,7 +16,7 @@ export function PasswordSearch({ value, onChange, resultCount }: PasswordSearchP
           role="searchbox"
           value={value}
           onChange={(event) => onChange(event.target.value)}
-          placeholder="Buscar Temu, Gmail, Instagram, correo…"
+          placeholder="Busca tu contraseña"
           className="min-w-0 flex-1 bg-transparent text-base font-bold text-black outline-none placeholder:font-medium placeholder:text-[#6b7280]"
         />
         {value && (

@@ -4,7 +4,7 @@ import { FormEvent, useEffect, useState } from "react";
 import { ChevronDown, Eye, EyeOff, LoaderCircle, Plus, ShieldCheck, Star, X } from "lucide-react";
 import { GoogleCredentialSelector } from "@/components/passwords/GoogleCredentialSelector";
 import { LoginMethodField } from "@/components/passwords/LoginMethodField";
-import { inferCredentialProvider } from "@/config/credential-platforms";
+import { inferCredentialProvider, isSocialCredential } from "@/config/credential-platforms";
 import type { Credential, CredentialDraft, LoginMethod } from "@/types/credential";
 
 const inputClass = "min-h-12 w-full rounded-2xl border border-[#d1d5db] bg-white px-4 text-sm font-bold text-black outline-none transition placeholder:font-medium placeholder:text-[#6b7280] focus:border-[#9ca3af] focus:ring-3 focus:ring-[#ed6725]/10";
@@ -80,6 +80,7 @@ interface CredentialFormProps {
 export function CredentialForm({ credential, googleCredentials, groupNames, onSave, onCreateGoogle, onCancel }: CredentialFormProps) {
   const [draft, setDraft] = useState(() => draftFromCredential(credential));
   const [creatingGroup, setCreatingGroup] = useState(false);
+  const [notesOpen, setNotesOpen] = useState(Boolean(credential?.notes));
   const [submitting, setSubmitting] = useState(false);
   const [error, setError] = useState("");
   const [addingGoogle, setAddingGoogle] = useState(false);
@@ -90,6 +91,7 @@ export function CredentialForm({ credential, googleCredentials, groupNames, onSa
   const googleProviderDetected = inferCredentialProvider(draft.platform, draft.url) === "google";
   const isGoogleProvider = draft.provider === "google";
   const showGoogleProviderOption = googleProviderDetected || isGoogleProvider;
+  const showUsername = isSocialCredential(draft.name, draft.platform, draft.url);
 
   useEffect(() => {
     const onKeyDown = (event: KeyboardEvent) => {
@@ -292,14 +294,16 @@ export function CredentialForm({ credential, googleCredentials, groupNames, onSa
 
           {draft.loginMethod === "password" && (
             <div className="grid gap-4 sm:grid-cols-2">
-              <label>
+              <label className={showUsername ? "" : "sm:col-span-2"}>
                 <span className={labelClass}>Email</span>
                 <input type="email" value={draft.email} onChange={(event) => setField("email", event.target.value)} autoComplete="off" className={inputClass} />
               </label>
-              <label>
-                <span className={labelClass}>Usuario</span>
-                <input value={draft.username} onChange={(event) => setField("username", event.target.value)} autoComplete="off" className={inputClass} />
-              </label>
+              {showUsername && (
+                <label>
+                  <span className={labelClass}>Usuario</span>
+                  <input value={draft.username} onChange={(event) => setField("username", event.target.value)} autoComplete="off" className={inputClass} />
+                </label>
+              )}
               <label className="sm:col-span-2">
                 <span className={labelClass}>Contraseña {credential ? <span className="normal-case tracking-normal text-black">(vacía para conservar la actual)</span> : "*"}</span>
                 <SecretInput value={draft.password} onChange={(value) => setField("password", value)} />
@@ -393,15 +397,26 @@ export function CredentialForm({ credential, googleCredentials, groupNames, onSa
             </label>
           )}
 
-          <label>
-            <span className={labelClass}>Notas</span>
-            <textarea value={draft.notes} onChange={(event) => setCapitalizedField("notes", event.target.value)} rows={3} placeholder="Información útil para encontrar o usar esta cuenta…" className={`${inputClass} resize-y py-3`} />
-          </label>
+          <div className="space-y-3">
+            {notesOpen && (
+              <label>
+                <span className={labelClass}>Notas</span>
+                <textarea value={draft.notes} onChange={(event) => setCapitalizedField("notes", event.target.value)} rows={3} placeholder="Información útil para encontrar o usar esta cuenta…" className={`${inputClass} resize-y py-3`} />
+              </label>
+            )}
 
-          <button type="button" onClick={() => setField("favorite", !draft.favorite)} className={`flex min-h-12 w-full items-center gap-3 rounded-2xl border border-[#d1d5db] px-4 text-left text-sm font-extrabold text-black transition ${draft.favorite ? "bg-[#fff3e8]" : "bg-white"}`}>
-            <Star aria-hidden="true" className="size-5" fill={draft.favorite ? "currentColor" : "none"} />
-            {draft.favorite ? "Cuenta favorita" : "Marcar como favorita"}
-          </button>
+            <div className="flex min-h-9 flex-wrap items-center gap-x-6 gap-y-2">
+              <button type="button" onClick={() => setNotesOpen((current) => !current)} className="inline-flex min-h-9 w-fit cursor-pointer items-center gap-2 text-sm font-bold text-[#6b7280] transition hover:text-black">
+                {notesOpen ? <EyeOff aria-hidden="true" className="size-5" /> : <Plus aria-hidden="true" className="size-5" />}
+                {notesOpen ? "Ocultar nota" : "Agregar nota"}
+              </button>
+
+              <button type="button" onClick={() => setField("favorite", !draft.favorite)} className={`inline-flex min-h-9 w-fit cursor-pointer items-center gap-2 text-sm font-bold transition ${draft.favorite ? "text-[#e66a27]" : "text-[#6b7280] hover:text-black"}`}>
+                <Star aria-hidden="true" className="size-5" fill={draft.favorite ? "currentColor" : "none"} />
+                {draft.favorite ? "Cuenta favorita" : "Marcar como favorita"}
+              </button>
+            </div>
+          </div>
 
           {error && <p className="rounded-xl bg-[#fff0ec] px-3 py-2 text-sm font-bold text-[#b74722]">{error}</p>}
 

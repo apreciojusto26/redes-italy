@@ -33,9 +33,9 @@ export function LoginMethodField({ value, onChange }: { value: LoginMethod; onCh
               role="radio"
               aria-checked={active}
               onClick={() => onChange(id)}
-              className={`flex min-h-12 cursor-pointer items-center gap-2 rounded-2xl border px-3 text-left text-xs font-extrabold transition ${
+              className={`flex min-h-12 cursor-pointer items-center gap-2 rounded-2xl border px-3 text-left text-xs font-extrabold transition focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-[#6b7280]/25 ${
                 active
-                  ? "border-[#9ca3af] bg-[#fff1e7] text-black"
+                  ? "border-[#9ca3af] bg-[#f3f4f6] text-black"
                   : "border-[#d1d5db] bg-white text-black hover:border-[#9ca3af]"
               }`}
             >

@@ -60,3 +60,44 @@ export function inferCredentialProvider(platform: string, url: string): Credenti
 
   return null;
 }
+
+const socialPlatformTerms = [
+  "instagram",
+  "tiktok",
+  "facebook",
+  "twitter",
+  "youtube",
+  "threads",
+  "linkedin",
+  "pinterest",
+  "snapchat",
+  "twitch",
+  "discord",
+  "reddit",
+  "telegram",
+  "whatsapp",
+  "bluesky",
+  "mastodon",
+  "behance",
+  "vimeo",
+  "kick",
+];
+
+export function isSocialCredential(name: string, platform: string, url: string): boolean {
+  let hostname = "";
+  try {
+    hostname = new URL(url).hostname.toLocaleLowerCase("es");
+  } catch {
+    // El nombre y la plataforma siguen permitiendo detectar la red social.
+  }
+
+  const normalizedName = normalize(name);
+  const normalizedPlatform = normalize(platform);
+  const searchable = `${normalizedName} ${normalizedPlatform} ${hostname}`;
+
+  if (normalizedName === "x" || normalizedPlatform === "x" || hostname === "x.com" || hostname.endsWith(".x.com")) {
+    return true;
+  }
+
+  return socialPlatformTerms.some((term) => searchable.includes(term));
+}
