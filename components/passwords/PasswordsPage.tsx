@@ -1,16 +1,19 @@
 "use client";
 
 import { useCallback, useEffect, useMemo, useRef, useState } from "react";
-import { LockKeyhole } from "lucide-react";
+import { CloudCheck, LoaderCircle } from "lucide-react";
 import { CredentialForm } from "@/components/passwords/CredentialForm";
+import { CredentialDetail } from "@/components/passwords/CredentialDetail";
 import { CredentialGroupFilter } from "@/components/passwords/CredentialGroupFilter";
 import { CredentialList } from "@/components/passwords/CredentialList";
 import { DeleteCredentialDialog } from "@/components/passwords/DeleteCredentialDialog";
+import { ManageCredentialGroups } from "@/components/passwords/ManageCredentialGroups";
 import { PasswordSearch } from "@/components/passwords/PasswordSearch";
 import { PasswordsHeader } from "@/components/passwords/PasswordsHeader";
 import { Toast } from "@/components/passwords/Toast";
 import { VaultUnlock } from "@/components/passwords/VaultUnlock";
 import { useCredentials } from "@/hooks/useCredentials";
+import { useCredentialGroups } from "@/hooks/useCredentialGroups";
 import { useVault } from "@/hooks/useVault";
 import type { Credential, CredentialDraft } from "@/types/credential";
 
@@ -24,16 +27,19 @@ function normalizeSearch(value: string): string {
 
 export function PasswordsPage() {
   const vault = useVault();
-  const credentialsState = useCredentials(vault.key);
+  const credentialsState = useCredentials(vault.status === "unlocked");
+  const groupsState = useCredentialGroups(vault.status === "unlocked");
   const [search, setSearch] = useState("");
   const [selectedGroup, setSelectedGroup] = useState<string | null>(null);
   const [formOpen, setFormOpen] = useState(false);
   const [editingCredential, setEditingCredential] = useState<Credential | null>(null);
   const [deletingCredential, setDeletingCredential] = useState<Credential | null>(null);
+  const [selectedCredentialId, setSelectedCredentialId] = useState<string | null>(null);
   const [toast, setToast] = useState("");
   const toastTimeout = useRef<number | null>(null);
-  const navigationSequence = useRef(0);
-  const [credentialNavigation, setCredentialNavigation] = useState<{ id: string; request: number } | null>(null);
+  const migrationStarted = useRef(false);
+  const [migrationError, setMigrationError] = useState("");
+  const [manageGroupsOpen, setManageGroupsOpen] = useState(false);
 
   const showToast = useCallback((message: string) => {
     setToast(message);
@@ -45,6 +51,7 @@ export function PasswordsPage() {
     () => new Map(credentialsState.credentials.map((credential) => [credential.id, credential])),
     [credentialsState.credentials],
   );
+  const selectedCredential = selectedCredentialId ? credentialMap.get(selectedCredentialId) ?? null : null;
 
   const googleCredentials = useMemo(
     () => credentialsState.credentials.filter((credential) =>
@@ -52,21 +59,10 @@ export function PasswordsPage() {
     [credentialsState.credentials],
   );
 
-  const groups = useMemo(() => {
-    const uniqueGroups = new Map<string, string>();
+  const groups = groupsState.groups;
+  const groupNames = groups.map((group) => group.name);
 
-    credentialsState.credentials.forEach((credential) => {
-      const group = credential.groupName.trim();
-      if (!group) return;
-      const normalizedGroup = normalizeSearch(group);
-      if (!uniqueGroups.has(normalizedGroup)) uniqueGroups.set(normalizedGroup, group);
-    });
-
-    return Array.from(uniqueGroups.values()).sort((first, second) =>
-      first.localeCompare(second, "es", { sensitivity: "base" }));
-  }, [credentialsState.credentials]);
-
-  const activeGroup = selectedGroup && groups.includes(selectedGroup) ? selectedGroup : null;
+  const activeGroup = selectedGroup && groupNames.includes(selectedGroup) ? selectedGroup : null;
 
   const visibleCredentials = useMemo(() => {
     const query = normalizeSearch(search);
@@ -125,34 +121,10 @@ export function PasswordsPage() {
     setSearch("");
   }, []);
 
-  const navigateToCredential = useCallback((credentialId: string) => {
-    if (!visibleCredentials.some((credential) => credential.id === credentialId)) {
-      setSearch("");
-      setSelectedGroup(null);
-    }
-    navigationSequence.current += 1;
-    setCredentialNavigation({ id: credentialId, request: navigationSequence.current });
-  }, [visibleCredentials]);
-
-  useEffect(() => {
-    if (!credentialNavigation) return;
-
-    const frameId = window.requestAnimationFrame(() => {
-      document.getElementById(`credential-${credentialNavigation.id}`)?.scrollIntoView({
-        behavior: "smooth",
-        block: "center",
-      });
-    });
-    const timeoutId = window.setTimeout(() => {
-      setCredentialNavigation((current) =>
-        current?.request === credentialNavigation.request ? null : current);
-    }, 1_800);
-
-    return () => {
-      window.cancelAnimationFrame(frameId);
-      window.clearTimeout(timeoutId);
-    };
-  }, [credentialNavigation]);
+  const openCredential = useCallback((credentialId: string) => {
+    setSelectedCredentialId(credentialId);
+    window.scrollTo({ top: 0, behavior: "smooth" });
+  }, []);
 
   const dependencies = useMemo(() => {
     if (!deletingCredential) return [];
@@ -181,9 +153,13 @@ export function PasswordsPage() {
     }
     setFormOpen(false);
     setEditingCredential(null);
+    await groupsState.refresh();
   };
 
   const createGoogle = async (email: string, password: string, groupName: string) => {
+    if (groupName.trim() && !groups.some((group) => normalizeSearch(group.name) === normalizeSearch(groupName))) {
+      await groupsState.create(groupName.trim(), "#9CA3AF");
+    }
     const created = await credentialsState.create({
       name: "Google / Gmail",
       platform: "Google / Gmail",
@@ -207,19 +183,105 @@ export function PasswordsPage() {
 
   const confirmDelete = async (force: boolean) => {
     if (!deletingCredential) return;
+    const deletingId = deletingCredential.id;
     await credentialsState.remove(deletingCredential.id, force);
     setDeletingCredential(null);
+    if (selectedCredentialId === deletingId) setSelectedCredentialId(null);
     showToast("Cuenta eliminada");
   };
 
-  if (vault.status !== "unlocked" || !vault.key) {
+  useEffect(() => {
+    if (
+      vault.status !== "unlocked" ||
+      !vault.requiresMigration ||
+      !vault.key ||
+      !credentialsState.ready ||
+      migrationStarted.current
+    ) return;
+
+    migrationStarted.current = true;
+    void credentialsState.migrateToPlaintext(vault.key)
+      .then(() => vault.finishDisabling())
+      .catch((reason: unknown) => {
+        setMigrationError(reason instanceof Error ? reason.message : "No se pudieron convertir las contraseñas existentes.");
+      });
+  }, [credentialsState, vault]);
+
+  if (vault.status !== "unlocked") {
     return (
       <VaultUnlock
         status={vault.status}
         error={vault.error}
-        onSetup={vault.setup}
         onUnlock={vault.unlock}
       />
+    );
+  }
+
+  if (vault.requiresMigration) {
+    return (
+      <div className="grid min-h-[420px] place-items-center rounded-[26px] border border-[#e5e7eb] bg-white px-5 text-center">
+        {migrationError ? (
+          <div className="max-w-md">
+            <p className="text-lg font-extrabold text-black">No se pudo desactivar la contraseña maestra</p>
+            <p className="mt-2 text-sm font-medium leading-6 text-[#6b7280]">{migrationError}</p>
+            <p className="mt-3 text-xs font-semibold text-[#6b7280]">Recarga la página para intentarlo nuevamente. No se eliminó ninguna contraseña.</p>
+          </div>
+        ) : (
+          <div>
+            <LoaderCircle aria-hidden="true" className="mx-auto size-7 animate-spin text-[#e46527]" />
+            <p className="mt-3 text-sm font-extrabold text-black">Desactivando la contraseña maestra…</p>
+            <p className="mt-1 text-xs font-semibold text-[#6b7280]">Esto solo ocurrirá una vez.</p>
+          </div>
+        )}
+      </div>
+    );
+  }
+
+  if (selectedCredential) {
+    return (
+      <>
+        <CredentialDetail
+          credential={selectedCredential}
+          credentialMap={credentialMap}
+          groupColor={groups.find((group) => normalizeSearch(group.name) === normalizeSearch(selectedCredential.groupName))?.color}
+          vaultKey={vault.key}
+          onBack={() => setSelectedCredentialId(null)}
+          onOpenCredential={openCredential}
+          onEdit={openEdit}
+          onDelete={setDeletingCredential}
+          onToggleFavorite={(credential) => {
+            void credentialsState.toggleFavorite(credential).catch(() => showToast("No se pudo cambiar el favorito"));
+          }}
+          onToast={showToast}
+        />
+
+        {formOpen && (
+          <CredentialForm
+            key={editingCredential?.id ?? "new-credential"}
+            credential={editingCredential ?? undefined}
+            googleCredentials={googleCredentials}
+            groupNames={groupNames}
+            onSave={saveCredential}
+            onCreateGoogle={createGoogle}
+            onCreateGroup={groupsState.create}
+            onCancel={() => {
+              setFormOpen(false);
+              setEditingCredential(null);
+            }}
+          />
+        )}
+
+        {deletingCredential && (
+          <DeleteCredentialDialog
+            credential={deletingCredential}
+            dependencies={dependencies}
+            onCancel={() => setDeletingCredential(null)}
+            onConfirm={confirmDelete}
+          />
+        )}
+
+        <Toast message={toast} />
+      </>
     );
   }
 
@@ -227,35 +289,25 @@ export function PasswordsPage() {
     <div className="space-y-4 sm:space-y-5">
       <PasswordsHeader
         onCreate={openCreate}
-        onLock={vault.lock}
       />
       <PasswordSearch value={search} onChange={changeSearch} resultCount={visibleCredentials.length} />
-      <CredentialGroupFilter groups={groups} value={activeGroup} onChange={changeGroup} />
+      <CredentialGroupFilter groups={groups} value={activeGroup} onChange={changeGroup} onManage={() => setManageGroupsOpen(true)} />
 
-      {credentialsState.error && (
-        <div className="rounded-2xl border border-[#f0d4c2] bg-[#fff6ef] px-4 py-3 text-sm font-bold text-[#a9552f]">{credentialsState.error}</div>
+      {(credentialsState.error || groupsState.error) && (
+        <div className="rounded-2xl border border-[#f0d4c2] bg-[#fff6ef] px-4 py-3 text-sm font-bold text-[#a9552f]">{credentialsState.error || groupsState.error}</div>
       )}
 
       <CredentialList
         credentials={visibleCredentials}
-        allCredentials={credentialsState.credentials}
-        vaultKey={vault.key}
         searching={Boolean(search.trim())}
         loading={credentialsState.loading}
         onCreate={openCreate}
-        onEdit={openEdit}
-        onDelete={setDeletingCredential}
-        onToggleFavorite={(credential) => {
-          void credentialsState.toggleFavorite(credential).catch(() => showToast("No se pudo cambiar el favorito"));
-        }}
-        highlightedCredentialId={credentialNavigation?.id ?? null}
-        onNavigateToCredential={navigateToCredential}
-        onToast={showToast}
+        onOpen={openCredential}
       />
 
       <footer className="flex items-center justify-center gap-2 pb-4 pt-2 text-center text-xs font-semibold text-black sm:text-sm">
-        <LockKeyhole aria-hidden="true" className="size-4 text-[#d46530]" />
-        Bóveda cifrada · Bloqueo tras 30 minutos de inactividad.
+        <CloudCheck aria-hidden="true" className="size-4 text-[#4c9560]" />
+        Tus cambios se guardan automáticamente.
       </footer>
 
       {formOpen && (
@@ -263,9 +315,10 @@ export function PasswordsPage() {
           key={editingCredential?.id ?? "new-credential"}
           credential={editingCredential ?? undefined}
           googleCredentials={googleCredentials}
-          groupNames={groups}
+          groupNames={groupNames}
           onSave={saveCredential}
           onCreateGoogle={createGoogle}
+          onCreateGroup={groupsState.create}
           onCancel={() => {
             setFormOpen(false);
             setEditingCredential(null);
@@ -279,6 +332,25 @@ export function PasswordsPage() {
           dependencies={dependencies}
           onCancel={() => setDeletingCredential(null)}
           onConfirm={confirmDelete}
+        />
+      )}
+
+      {manageGroupsOpen && (
+        <ManageCredentialGroups
+          groups={groups}
+          onRename={async (currentName, newName, color) => {
+            await groupsState.rename(currentName, newName, color);
+            setSelectedGroup(null);
+            await credentialsState.refresh();
+            showToast("Grupo actualizado");
+          }}
+          onDelete={async (name) => {
+            await groupsState.remove(name);
+            setSelectedGroup(null);
+            await credentialsState.refresh();
+            showToast("Grupo eliminado");
+          }}
+          onClose={() => setManageGroupsOpen(false)}
         />
       )}
 

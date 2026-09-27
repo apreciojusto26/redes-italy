@@ -34,6 +34,11 @@ export async function saveVaultConfiguration(configuration: VaultConfiguration):
   if (!response.ok) throw await responseError(response);
 }
 
+export async function deleteVaultConfiguration(): Promise<void> {
+  const response = await fetch("/api/vault", { method: "DELETE" });
+  if (!response.ok) throw await responseError(response);
+}
+
 export async function getCredentials(signal?: AbortSignal): Promise<Credential[]> {
   const response = await fetch("/api/credentials", { cache: "no-store", signal });
   if (!response.ok) throw await responseError(response);

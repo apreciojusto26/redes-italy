@@ -4,6 +4,7 @@ const KDF_ITERATIONS = 310_000;
 const VAULT_VERIFIER = "italy-password-vault:v1";
 const encoder = new TextEncoder();
 const decoder = new TextDecoder();
+export const PLAINTEXT_PASSWORD_IV = "plaintext:v1";
 
 function bytesToBase64(bytes: Uint8Array): string {
   let binary = "";
@@ -101,17 +102,18 @@ export async function unlockVault(
   return key;
 }
 
-export async function encryptPassword(password: string, key: CryptoKey) {
+export function passwordForStorage(password: string) {
   if (!password) return { encryptedPassword: null, passwordIv: null };
-  const result = await encryptText(password, key);
-  return { encryptedPassword: result.ciphertext, passwordIv: result.iv };
+  return { encryptedPassword: password, passwordIv: PLAINTEXT_PASSWORD_IV };
 }
 
 export async function decryptPassword(
   encryptedPassword: string,
   passwordIv: string,
-  key: CryptoKey,
+  key: CryptoKey | null,
 ): Promise<string> {
+  if (passwordIv === PLAINTEXT_PASSWORD_IV) return encryptedPassword;
+  if (!key) throw new Error("Esta contraseña todavía necesita migrarse.");
   const decrypted = await window.crypto.subtle.decrypt(
     { name: "AES-GCM", iv: base64ToBytes(passwordIv) },
     key,

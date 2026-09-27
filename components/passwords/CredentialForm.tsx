@@ -4,7 +4,7 @@ import { FormEvent, useEffect, useState } from "react";
 import { ChevronDown, Eye, EyeOff, LoaderCircle, Plus, ShieldCheck, Star, X } from "lucide-react";
 import { GoogleCredentialSelector } from "@/components/passwords/GoogleCredentialSelector";
 import { LoginMethodField } from "@/components/passwords/LoginMethodField";
-import { inferCredentialProvider, isSocialCredential } from "@/config/credential-platforms";
+import { inferCredentialProvider, isSocialCredential, isWebsitePlatform } from "@/config/credential-platforms";
 import type { Credential, CredentialDraft, LoginMethod } from "@/types/credential";
 
 const inputClass = "min-h-12 w-full rounded-2xl border border-[#d1d5db] bg-white px-4 text-sm font-bold text-black outline-none transition placeholder:font-medium placeholder:text-[#6b7280] focus:border-[#9ca3af] focus:ring-3 focus:ring-[#ed6725]/10";
@@ -74,10 +74,11 @@ interface CredentialFormProps {
   groupNames: string[];
   onSave: (draft: CredentialDraft) => Promise<void>;
   onCreateGoogle: (email: string, password: string, groupName: string) => Promise<Credential>;
+  onCreateGroup: (name: string, color: string) => Promise<void>;
   onCancel: () => void;
 }
 
-export function CredentialForm({ credential, googleCredentials, groupNames, onSave, onCreateGoogle, onCancel }: CredentialFormProps) {
+export function CredentialForm({ credential, googleCredentials, groupNames, onSave, onCreateGoogle, onCreateGroup, onCancel }: CredentialFormProps) {
   const [draft, setDraft] = useState(() => draftFromCredential(credential));
   const [creatingGroup, setCreatingGroup] = useState(false);
   const [notesOpen, setNotesOpen] = useState(Boolean(credential?.notes));
@@ -88,10 +89,12 @@ export function CredentialForm({ credential, googleCredentials, groupNames, onSa
   const [googlePassword, setGooglePassword] = useState("");
   const [creatingGoogle, setCreatingGoogle] = useState(false);
   const [duplicateGoogle, setDuplicateGoogle] = useState<Credential | null>(null);
+  const [newGroupColor, setNewGroupColor] = useState("#7C6CE7");
   const googleProviderDetected = inferCredentialProvider(draft.platform, draft.url) === "google";
   const isGoogleProvider = draft.provider === "google";
   const showGoogleProviderOption = googleProviderDetected || isGoogleProvider;
   const showUsername = isSocialCredential(draft.name, draft.platform, draft.url);
+  const isWebsite = draft.loginMethod === "website";
 
   useEffect(() => {
     const onKeyDown = (event: KeyboardEvent) => {
@@ -124,6 +127,9 @@ export function CredentialForm({ credential, googleCredentials, groupNames, onSa
       return {
         ...current,
         platform: normalizedPlatform,
+        loginMethod: isWebsitePlatform(normalizedPlatform)
+          ? "website"
+          : current.loginMethod === "website" ? "password" : current.loginMethod,
         provider: previousWasDetected && !detectedProvider ? null : current.provider,
       };
     });
@@ -160,6 +166,9 @@ export function CredentialForm({ credential, googleCredentials, groupNames, onSa
     setError("");
 
     if (!draft.name.trim()) return setError("El nombre es obligatorio.");
+    if (draft.loginMethod === "website" && !draft.url.trim()) {
+      return setError("Añade el enlace de la página web.");
+    }
     if (draft.loginMethod === "google" && !draft.loginCredentialId) {
       return setError("Selecciona la cuenta Google utilizada para acceder.");
     }
@@ -175,6 +184,9 @@ export function CredentialForm({ credential, googleCredentials, groupNames, onSa
 
     setSubmitting(true);
     try {
+      if (creatingGroup && draft.groupName.trim()) {
+        await onCreateGroup(draft.groupName.trim(), newGroupColor);
+      }
       await onSave(draft);
     } catch (reason) {
       setError(reason instanceof Error ? reason.message : "No se pudo guardar la cuenta.");
@@ -221,7 +233,7 @@ export function CredentialForm({ credential, googleCredentials, groupNames, onSa
       <div role="dialog" aria-modal="true" aria-labelledby="credential-form-title" className="mx-auto my-3 w-full max-w-3xl rounded-[26px] border border-[#d1d5db] bg-white shadow-[0_28px_90px_rgba(17,24,39,0.3)] sm:my-8">
         <div className="sticky top-0 z-10 flex items-start justify-between gap-4 rounded-t-[26px] border-b border-[#d1d5db] bg-white/95 px-5 py-5 backdrop-blur-xl sm:px-7">
           <div>
-            <p className="mb-1 text-[10px] font-extrabold uppercase tracking-[0.16em] text-black">Bóveda privada</p>
+            <p className="mb-1 text-[10px] font-extrabold uppercase tracking-[0.16em] text-black">Gestor de accesos</p>
             <h2 id="credential-form-title" className="text-xl font-extrabold tracking-[-0.03em] text-black">{credential ? `Editar ${credential.name}` : "Nueva cuenta"}</h2>
           </div>
           <button type="button" onClick={onCancel} aria-label="Cerrar" className="grid size-10 place-items-center rounded-full text-[#4b5563] transition hover:bg-[#f3f4f6]">
@@ -243,13 +255,19 @@ export function CredentialForm({ credential, googleCredentials, groupNames, onSa
               <span className={labelClass}>Grupo / Proyecto</span>
               {creatingGroup ? (
                 <span className="block space-y-2">
-                  <input
-                    value={draft.groupName}
-                    onChange={(event) => setCapitalizedField("groupName", event.target.value)}
-                    placeholder="Nombre del nuevo grupo"
-                    className={inputClass}
-                    autoFocus
-                  />
+                  <span className="flex gap-2">
+                    <input
+                      value={draft.groupName}
+                      onChange={(event) => setCapitalizedField("groupName", event.target.value)}
+                      placeholder="Nombre del nuevo grupo"
+                      className={inputClass}
+                      autoFocus
+                    />
+                    <label className="relative grid size-12 shrink-0 cursor-pointer place-items-center overflow-hidden rounded-2xl border border-[#d1d5db] bg-white" title="Elegir color">
+                      <span className="size-6 rounded-full" style={{ backgroundColor: newGroupColor }} />
+                      <input type="color" value={newGroupColor} onChange={(event) => setNewGroupColor(event.target.value.toUpperCase())} className="absolute inset-0 cursor-pointer opacity-0" aria-label="Color del nuevo grupo" />
+                    </label>
+                  </span>
                   <button
                     type="button"
                     onClick={() => {
@@ -285,12 +303,18 @@ export function CredentialForm({ credential, googleCredentials, groupNames, onSa
               )}
             </label>
             <label>
-              <span className={labelClass}>URL</span>
+              <span className={labelClass}>{isWebsite ? "Enlace *" : "URL"}</span>
               <input type="url" value={draft.url} onChange={(event) => changeUrl(event.target.value)} placeholder="https://…" className={inputClass} />
             </label>
           </div>
 
-          <LoginMethodField value={draft.loginMethod} onChange={changeMethod} />
+          {!isWebsite && <LoginMethodField value={draft.loginMethod} onChange={changeMethod} />}
+
+          {isWebsite && (
+            <p className="rounded-2xl border border-[#cfe5d2] bg-[#eff8f0] px-4 py-3 text-sm font-semibold leading-6 text-[#3f6948]">
+              Esta entrada es una página web. Solo necesitas añadir su enlace; no requiere correo ni contraseña.
+            </p>
+          )}
 
           {draft.loginMethod === "password" && (
             <div className="grid gap-4 sm:grid-cols-2">

@@ -1,5 +1,10 @@
-export type LoginMethod = "password" | "google" | "email_code" | "magic_link" | "other";
+export type LoginMethod = "password" | "google" | "email_code" | "magic_link" | "other" | "website";
 export type CredentialProvider = "google" | null;
+
+export interface CredentialGroupDefinition {
+  name: string;
+  color: string;
+}
 
 export interface Credential {
   id: string;

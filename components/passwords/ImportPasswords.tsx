@@ -61,7 +61,7 @@ export function ImportPasswords({ onCancel, onImport }: ImportPasswordsProps) {
           <button type="button" onClick={onCancel} disabled={importing} aria-label="Cerrar" className="grid size-10 place-items-center rounded-full text-[#4b5563] hover:bg-[#f3f4f6]"><X aria-hidden="true" className="size-5" /></button>
         </div>
         <h2 id="import-title" className="mt-5 text-xl font-extrabold tracking-[-0.03em] text-black">Importar desde Google</h2>
-        <p className="mt-2 text-sm font-semibold leading-6 text-black">Selecciona el CSV exportado desde Google Password Manager. El archivo se procesa localmente y las contraseñas se cifran antes de enviarse.</p>
+        <p className="mt-2 text-sm font-semibold leading-6 text-black">Selecciona el CSV exportado desde Google Password Manager. El archivo se procesa localmente antes de guardar las cuentas.</p>
 
         <label className="mt-5 flex min-h-28 cursor-pointer flex-col items-center justify-center rounded-[20px] border-2 border-dashed border-[#d1d5db] bg-[#f9fafb] px-4 text-center transition hover:border-[#9ca3af] hover:bg-[#f3f4f6]">
           <FileUp aria-hidden="true" className="size-6 text-[#d96129]" />

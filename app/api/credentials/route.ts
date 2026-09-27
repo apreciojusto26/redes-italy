@@ -5,7 +5,7 @@ import type { Credential, CredentialPayload, CredentialProvider, LoginMethod } f
 export const runtime = "nodejs";
 export const dynamic = "force-dynamic";
 
-const loginMethods = new Set<LoginMethod>(["password", "google", "email_code", "magic_link", "other"]);
+const loginMethods = new Set<LoginMethod>(["password", "google", "email_code", "magic_link", "other", "website"]);
 
 function databaseError(error: unknown) {
   const message = error instanceof TursoConfigurationError
@@ -57,6 +57,7 @@ function isCredentialPayload(value: unknown): value is CredentialPayload {
     ((item.encryptedPassword === null && item.passwordIv === null) ||
       (Boolean(item.encryptedPassword) && Boolean(item.passwordIv))) &&
     (item.loginMethod !== "password" || Boolean(item.encryptedPassword && item.passwordIv)) &&
+    (item.loginMethod !== "website" || Boolean(item.url)) &&
     (item.provider == null || item.loginMethod === "password") &&
     (item.loginMethod !== "other" || item.accessInstructions.trim().length > 0) &&
     ((item.loginMethod !== "email_code" && item.loginMethod !== "magic_link") || item.email.trim().length > 0)

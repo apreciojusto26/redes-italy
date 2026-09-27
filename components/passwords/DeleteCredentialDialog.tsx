@@ -53,7 +53,7 @@ export function DeleteCredentialDialog({ credential, dependencies, onCancel, onC
             <p className="mt-3 text-sm font-semibold leading-6 text-black">Estas cuentas no se eliminarán, pero quedarán sin credencial relacionada.</p>
           </div>
         ) : (
-          <p className="mt-3 text-sm font-semibold leading-6 text-black">Esta acción eliminará la cuenta de la bóveda y no se puede deshacer.</p>
+          <p className="mt-3 text-sm font-semibold leading-6 text-black">Esta acción eliminará la cuenta y no se puede deshacer.</p>
         )}
 
         {error && <p className="mt-4 rounded-xl bg-[#fff0ec] px-3 py-2 text-sm font-bold text-[#b74722]">{error}</p>}

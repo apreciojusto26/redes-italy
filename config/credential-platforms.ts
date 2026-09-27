@@ -20,6 +20,9 @@ const appearances: Record<string, CredentialAppearance> = {
   facebook: { key: "facebook", accent: "#2877d4", soft: "#edf5ff" },
   github: { key: "github", accent: "#332922", soft: "#f0ece9" },
   hostinger: { key: "hostinger", accent: "#673de6", soft: "#f1edff" },
+  turso: { key: "turso", accent: "#1f6f61", soft: "#e8f8f4" },
+  shopify: { key: "shopify", accent: "#7ab55c", soft: "#eef7e9" },
+  wallapop: { key: "wallapop", accent: "#13c1ac", soft: "#e7f8f6" },
 };
 
 function normalize(value: string): string {
@@ -59,6 +62,15 @@ export function inferCredentialProvider(platform: string, url: string): Credenti
   }
 
   return null;
+}
+
+export function isWebsitePlatform(platform: string): boolean {
+  const normalizedPlatform = normalize(platform)
+    .normalize("NFD")
+    .replace(/[\u0300-\u036f]/g, "")
+    .replace(/\s+/g, " ");
+
+  return new Set(["web", "pagina", "pagina web", "sitio web", "website"]).has(normalizedPlatform);
 }
 
 const socialPlatformTerms = [

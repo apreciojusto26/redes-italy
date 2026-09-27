@@ -8,9 +8,10 @@ import { decryptPassword } from "@/lib/credential-crypto";
 interface PasswordFieldProps {
   encryptedPassword: string | null;
   passwordIv: string | null;
-  vaultKey: CryptoKey;
+  vaultKey: CryptoKey | null;
   label?: string;
   onToast: (message: string) => void;
+  fullWidth?: boolean;
 }
 
 export function PasswordField({
@@ -19,6 +20,7 @@ export function PasswordField({
   vaultKey,
   label = "Contraseña",
   onToast,
+  fullWidth = false,
 }: PasswordFieldProps) {
   const [visiblePassword, setVisiblePassword] = useState<string | null>(null);
   const hasPassword = Boolean(encryptedPassword && passwordIv);
@@ -37,14 +39,14 @@ export function PasswordField({
     try {
       setVisiblePassword(await decrypt());
     } catch {
-      onToast("No se pudo descifrar la contraseña");
+      onToast("No se pudo leer la contraseña");
     }
   };
 
   const isVisible = visiblePassword !== null;
 
   return (
-    <div className="flex min-h-8 w-full min-w-0 items-start gap-0.5 sm:w-[280px] sm:flex-none" title={label}>
+    <div className={`flex min-h-8 w-full min-w-0 items-start gap-0.5 ${fullWidth ? "" : "sm:w-[280px] sm:flex-none"}`} title={label}>
       <span className="sr-only">{label}</span>
       <span className={`min-w-0 flex-1 py-2 text-xs font-bold leading-4 ${isVisible ? "break-all whitespace-normal" : "truncate whitespace-nowrap"} text-black`}>
         {hasPassword ? visiblePassword ?? "••••••••••" : "Sin contraseña"}

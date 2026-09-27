@@ -7,7 +7,7 @@ import {
   getCredentials,
   updateCredential as updateCredentialRequest,
 } from "@/lib/credential-api";
-import { encryptPassword } from "@/lib/credential-crypto";
+import { decryptPassword, passwordForStorage, PLAINTEXT_PASSWORD_IV } from "@/lib/credential-crypto";
 import type { Credential, CredentialDraft, CredentialPayload } from "@/types/credential";
 
 function payloadFromCredential(credential: Credential): CredentialPayload {
@@ -44,17 +44,19 @@ function normalizeUrl(value: string): string {
   }
 }
 
-export function useCredentials(key: CryptoKey | null) {
+export function useCredentials(enabled: boolean) {
   const [credentials, setCredentials] = useState<Credential[]>([]);
   const [loading, setLoading] = useState(false);
+  const [ready, setReady] = useState(false);
   const [error, setError] = useState("");
 
   const refresh = useCallback(async (signal?: AbortSignal) => {
-    if (!key) return;
+    if (!enabled) return;
     setLoading(true);
     try {
       const items = await getCredentials(signal);
       setCredentials(items);
+      setReady(true);
       setError("");
     } catch (reason) {
       if (signal?.aborted) return;
@@ -62,11 +64,14 @@ export function useCredentials(key: CryptoKey | null) {
     } finally {
       if (!signal?.aborted) setLoading(false);
     }
-  }, [key]);
+  }, [enabled]);
 
   useEffect(() => {
-    if (!key) {
-      const timeoutId = window.setTimeout(() => setCredentials([]), 0);
+    if (!enabled) {
+      const timeoutId = window.setTimeout(() => {
+        setCredentials([]);
+        setReady(false);
+      }, 0);
       return () => window.clearTimeout(timeoutId);
     }
 
@@ -78,25 +83,24 @@ export function useCredentials(key: CryptoKey | null) {
       window.clearTimeout(initialRefreshId);
       window.clearInterval(intervalId);
     };
-  }, [key, refresh]);
+  }, [enabled, refresh]);
 
   const buildPayload = useCallback(async (
     draft: CredentialDraft,
     existing?: Credential,
   ): Promise<CredentialPayload> => {
-    if (!key) throw new Error("Desbloquea la bóveda antes de guardar.");
-
     const keepsOwnPassword = draft.loginMethod === "password";
     let encryptedPassword = keepsOwnPassword ? existing?.encryptedPassword ?? null : null;
     let passwordIv = keepsOwnPassword ? existing?.passwordIv ?? null : null;
 
     if (keepsOwnPassword && draft.password) {
-      const encrypted = await encryptPassword(draft.password, key);
-      encryptedPassword = encrypted.encryptedPassword;
-      passwordIv = encrypted.passwordIv;
+      const stored = passwordForStorage(draft.password);
+      encryptedPassword = stored.encryptedPassword;
+      passwordIv = stored.passwordIv;
     }
 
     const normalizedUrl = normalizeUrl(draft.url);
+    const isWebsite = draft.loginMethod === "website";
     return {
       id: existing?.id ?? window.crypto.randomUUID(),
       name: draft.name,
@@ -106,8 +110,8 @@ export function useCredentials(key: CryptoKey | null) {
       url: normalizedUrl,
       provider: draft.loginMethod === "password" ? draft.provider : null,
       loginMethod: draft.loginMethod,
-      email: draft.email,
-      username: draft.username,
+      email: isWebsite ? "" : draft.email,
+      username: isWebsite ? "" : draft.username,
       encryptedPassword,
       passwordIv,
       loginCredentialId: draft.loginMethod === "google" ? draft.loginCredentialId : null,
@@ -118,7 +122,29 @@ export function useCredentials(key: CryptoKey | null) {
       notes: draft.notes,
       favorite: draft.favorite,
     };
-  }, [key]);
+  }, []);
+
+  const migrateToPlaintext = useCallback(async (legacyKey: CryptoKey) => {
+    const migrated = await Promise.all(credentials.map(async (credential) => {
+      if (!credential.encryptedPassword || !credential.passwordIv || credential.passwordIv === PLAINTEXT_PASSWORD_IV) {
+        return credential;
+      }
+
+      const password = await decryptPassword(
+        credential.encryptedPassword,
+        credential.passwordIv,
+        legacyKey,
+      );
+      const stored = passwordForStorage(password);
+      return updateCredentialRequest({
+        ...payloadFromCredential(credential),
+        encryptedPassword: stored.encryptedPassword,
+        passwordIv: stored.passwordIv,
+      });
+    }));
+
+    setCredentials(migrated);
+  }, [credentials]);
 
   const create = useCallback(async (draft: CredentialDraft) => {
     const credential = await createCredentialRequest(await buildPayload(draft));
@@ -151,5 +177,5 @@ export function useCredentials(key: CryptoKey | null) {
       })));
   }, []);
 
-  return { credentials, loading, error, create, update, toggleFavorite, remove, refresh };
+  return { credentials, loading, ready, error, create, update, toggleFavorite, remove, refresh, migrateToPlaintext };
 }

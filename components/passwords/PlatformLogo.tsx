@@ -1,4 +1,7 @@
+"use client";
+
 /* eslint-disable @next/next/no-img-element */
+import { useState } from "react";
 import { Globe2 } from "lucide-react";
 import {
   siFacebook,
@@ -8,7 +11,9 @@ import {
   siHostinger,
   siInstagram,
   siPayoneer,
+  siShopify,
   siTiktok,
+  siTurso,
   siVercel,
 } from "simple-icons";
 import { getCredentialAppearance } from "@/config/credential-platforms";
@@ -27,7 +32,9 @@ const vectorLogos: Record<string, SimpleIconData> = {
   hostinger: siHostinger,
   instagram: siInstagram,
   payoneer: siPayoneer,
+  shopify: siShopify,
   tiktok: siTiktok,
+  turso: siTurso,
   vercel: siVercel,
 };
 
@@ -36,6 +43,7 @@ const faviconDomains: Record<string, string> = {
   hotmart: "hotmart.com",
   sumup: "sumup.com",
   temu: "temu.com",
+  wallapop: "wallapop.com",
 };
 
 function domainFromUrl(url: string): string | null {
@@ -59,33 +67,32 @@ export function PlatformLogo({ name, platform, url, compact = false }: PlatformL
   const appearance = getCredentialAppearance(name, platform);
   const vectorLogo = appearance.key ? vectorLogos[appearance.key] : null;
   const domain = (appearance.key && faviconDomains[appearance.key]) || domainFromUrl(url);
+  const [failedDomain, setFailedDomain] = useState<string | null>(null);
+  const imageFailed = Boolean(domain && failedDomain === domain);
 
   return (
     <span
-      className={`relative grid shrink-0 place-items-center overflow-hidden ${compact ? "size-7 rounded-lg" : "size-8 rounded-[10px]"}`}
-      style={{ color: appearance.accent, backgroundColor: appearance.soft }}
+      className={`relative grid shrink-0 place-items-center ${compact ? "size-7" : "size-8"}`}
+      style={{ color: appearance.accent }}
     >
       {vectorLogo ? (
         <svg
           viewBox="0 0 24 24"
           aria-label={`Logo de ${vectorLogo.title}`}
-          className={compact ? "size-4" : "size-[18px]"}
+          className={compact ? "size-[18px]" : "size-[22px]"}
           fill={`#${vectorLogo.hex}`}
         >
           <path d={vectorLogo.path} />
         </svg>
+      ) : domain && !imageFailed ? (
+        <img
+          src={`https://www.google.com/s2/favicons?domain=${encodeURIComponent(domain)}&sz=128`}
+          alt={`Logo de ${platform || name}`}
+          className={`size-full object-contain mix-blend-multiply ${compact ? "p-1" : "p-1"}`}
+          onError={() => setFailedDomain(domain)}
+        />
       ) : (
-        <>
-          <Globe2 aria-hidden="true" className={compact ? "size-3.5" : "size-4"} />
-          {domain && (
-            <img
-              src={`https://www.google.com/s2/favicons?domain=${encodeURIComponent(domain)}&sz=64`}
-              alt={`Logo de ${platform || name}`}
-              className={`absolute inset-0 size-full object-contain ${compact ? "p-1" : "p-1.5"}`}
-              onError={(event) => { event.currentTarget.style.display = "none"; }}
-            />
-          )}
-        </>
+        <Globe2 aria-label={`Icono de ${platform || name}`} className={compact ? "size-[18px]" : "size-[22px]"} />
       )}
     </span>
   );
