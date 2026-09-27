@@ -1,5 +1,9 @@
+"use client";
+
+import { useState } from "react";
 import {
   AlertTriangle,
+  ChevronRight,
   ExternalLink,
   KeyRound,
   Link2,
@@ -42,6 +46,25 @@ function InlineValue({ label, value, copyMessage, onToast }: InlineValueProps) {
   );
 }
 
+function relatedAccessLabels(credential: Credential, googleCredentialId: string): string[] {
+  const labels: string[] = [];
+
+  if (credential.loginCredentialId === googleCredentialId) {
+    labels.push(credential.loginMethod === "google" ? "Acceso con Gmail" : "Inicio relacionado");
+  }
+  if (credential.emailCredentialId === googleCredentialId) {
+    labels.push(
+      credential.loginMethod === "email_code"
+        ? "Código por email"
+        : credential.loginMethod === "magic_link"
+          ? "Magic link por email"
+          : "Correo relacionado",
+    );
+  }
+
+  return labels;
+}
+
 interface CredentialCardProps {
   credential: Credential;
   credentialMap: Map<string, Credential>;
@@ -61,6 +84,7 @@ export function CredentialCard({
   onToggleFavorite,
   onToast,
 }: CredentialCardProps) {
+  const [expanded, setExpanded] = useState(false);
   const method = methodLabels[credential.loginMethod];
   const MethodIcon = method.icon;
   const loginCredential = credential.loginCredentialId
@@ -75,6 +99,15 @@ export function CredentialCard({
     normalizedPlatform && normalizedPlatform !== normalizedName ? credential.platform : "",
     credential.category,
   ].filter(Boolean).join(" · ");
+  const isGoogleProvider = credential.provider === "google";
+  const relatedCredentials = isGoogleProvider
+    ? Array.from(credentialMap.values()).filter((item) =>
+        item.id !== credential.id && (
+          item.loginCredentialId === credential.id || item.emailCredentialId === credential.id
+        ))
+    : [];
+  const canExpand = relatedCredentials.length > 0;
+  const relationCountLabel = `${relatedCredentials.length} ${relatedCredentials.length === 1 ? "vinculada" : "vinculadas"}`;
 
   const identityValues = credential.loginMethod === "google"
     ? loginCredential
@@ -96,12 +129,31 @@ export function CredentialCard({
         : null;
 
   return (
-    <article className="rounded-[18px] border border-[#eadfd4] bg-[#fffdfa] px-3.5 py-2.5 shadow-[0_5px_18px_rgba(75,51,38,0.035)] transition duration-300 hover:border-[#e2d2c6] hover:shadow-[0_8px_24px_rgba(75,51,38,0.06)] sm:px-4">
+    <article className="overflow-hidden rounded-[18px] border border-[#eadfd4] bg-[#fffdfa] px-3.5 py-2.5 shadow-[0_5px_18px_rgba(75,51,38,0.035)] transition duration-300 hover:border-[#e2d2c6] hover:shadow-[0_8px_24px_rgba(75,51,38,0.06)] sm:px-4">
       <div className="flex min-h-8 min-w-0 items-center gap-2.5">
-        <PlatformLogo name={credential.name} platform={credential.platform} url={credential.url} />
-        <h2 className="min-w-0 truncate text-sm font-extrabold tracking-[-0.02em] text-[#2b201a]">{credential.name}</h2>
-        {metadata && (
-          <span className="min-w-0 truncate text-[11px] font-semibold text-[#9a877b]">· {metadata}</span>
+        {isGoogleProvider ? (
+          <button
+            type="button"
+            onClick={() => canExpand && setExpanded((current) => !current)}
+            disabled={!canExpand}
+            aria-expanded={canExpand ? expanded : undefined}
+            aria-controls={canExpand ? `linked-credentials-${credential.id}` : undefined}
+            className={`flex min-w-0 items-center gap-2.5 text-left ${canExpand ? "cursor-pointer rounded-lg outline-none focus-visible:ring-2 focus-visible:ring-[#e66a27]/35" : "cursor-default"}`}
+          >
+            <PlatformLogo name={credential.name} platform={credential.platform} url={credential.url} />
+            <h2 className="min-w-0 truncate text-sm font-extrabold tracking-[-0.02em] text-[#2b201a]">{credential.name}</h2>
+            {metadata && <span className="min-w-0 truncate text-[11px] font-semibold text-[#9a877b]">· {metadata}</span>}
+            <span className="shrink-0 text-[10px] font-extrabold text-[#a17e6a]">· {relationCountLabel}</span>
+            {canExpand && (
+              <ChevronRight aria-hidden="true" className={`size-3.5 shrink-0 text-[#b07d60] transition-transform duration-200 ${expanded ? "rotate-90" : ""}`} />
+            )}
+          </button>
+        ) : (
+          <div className="flex min-w-0 items-center gap-2.5">
+            <PlatformLogo name={credential.name} platform={credential.platform} url={credential.url} />
+            <h2 className="min-w-0 truncate text-sm font-extrabold tracking-[-0.02em] text-[#2b201a]">{credential.name}</h2>
+            {metadata && <span className="min-w-0 truncate text-[11px] font-semibold text-[#9a877b]">· {metadata}</span>}
+          </div>
         )}
 
         <div className="ml-auto flex shrink-0 items-center gap-0.5">
@@ -192,6 +244,46 @@ export function CredentialCard({
           </div>
         </div>
       </div>
+
+      {isGoogleProvider && expanded && canExpand && (
+        <div id={`linked-credentials-${credential.id}`} className="-mx-3.5 -mb-2.5 mt-2.5 border-t border-[#ebe0d7] bg-[#fbf7f3]/85 px-3.5 py-2.5 sm:-mx-4 sm:px-4">
+          <div className="mb-1.5 flex items-center justify-between gap-3 px-1">
+            <p className="text-[10px] font-extrabold uppercase tracking-[0.12em] text-[#8f7668]">Cuentas vinculadas</p>
+            <span className="text-[10px] font-bold text-[#aa9183]">{relationCountLabel}</span>
+          </div>
+
+          <ul className="divide-y divide-[#e9ded5]" aria-label={`Cuentas vinculadas a ${credential.name}`}>
+            {relatedCredentials.map((relatedCredential) => {
+              const accessLabels = relatedAccessLabels(relatedCredential, credential.id);
+              return (
+                <li key={relatedCredential.id} className="grid min-h-9 grid-cols-[minmax(0,1fr)_auto] items-center gap-x-2 gap-y-0.5 px-1 py-1.5 sm:grid-cols-[minmax(0,1fr)_auto_auto] sm:gap-x-4">
+                  <div className="col-span-2 min-w-0 sm:col-span-1">
+                    <p className="truncate text-xs font-extrabold text-[#49382f]">{relatedCredential.name}</p>
+                    {relatedCredential.platform && relatedCredential.platform.toLocaleLowerCase("es") !== relatedCredential.name.toLocaleLowerCase("es") && (
+                      <p className="truncate text-[10px] font-semibold text-[#9b887d]">{relatedCredential.platform}</p>
+                    )}
+                  </div>
+                  <span className="truncate text-[11px] font-bold text-[#7a6356]">{accessLabels.join(" · ")}</span>
+                  {relatedCredential.url ? (
+                    <a
+                      href={relatedCredential.url}
+                      target="_blank"
+                      rel="noreferrer"
+                      title={`Abrir ${relatedCredential.platform || relatedCredential.name}`}
+                      className="inline-flex min-h-7 cursor-pointer items-center gap-1 rounded-lg px-2 text-[11px] font-extrabold text-[#d65a21] transition hover:bg-white"
+                    >
+                      Abrir
+                      <ExternalLink aria-hidden="true" className="size-3" />
+                    </a>
+                  ) : (
+                    <span aria-hidden="true" />
+                  )}
+                </li>
+              );
+            })}
+          </ul>
+        </div>
+      )}
     </article>
   );
 }

@@ -1,7 +1,7 @@
 "use client";
 
 import { FormEvent, useEffect, useState } from "react";
-import { LoaderCircle, Plus, Star, X } from "lucide-react";
+import { Eye, EyeOff, LoaderCircle, Plus, Star, X } from "lucide-react";
 import { GoogleCredentialSelector } from "@/components/passwords/GoogleCredentialSelector";
 import { LoginMethodField } from "@/components/passwords/LoginMethodField";
 import { inferCredentialProvider } from "@/config/credential-platforms";
@@ -9,6 +9,38 @@ import type { Credential, CredentialDraft, LoginMethod } from "@/types/credentia
 
 const inputClass = "min-h-12 w-full rounded-2xl border border-[#e7dcd3] bg-white px-4 text-sm font-bold text-[#3e3028] outline-none transition placeholder:font-medium placeholder:text-[#ae9b90] focus:border-[#e89469] focus:ring-3 focus:ring-[#ed6725]/10";
 const labelClass = "mb-2 block text-xs font-extrabold uppercase tracking-[0.12em] text-[#806d62]";
+
+interface SecretInputProps {
+  value: string;
+  onChange: (value: string) => void;
+  placeholder?: string;
+}
+
+function SecretInput({ value, onChange, placeholder }: SecretInputProps) {
+  const [visible, setVisible] = useState(false);
+
+  return (
+    <div className="relative">
+      <input
+        type={visible ? "text" : "password"}
+        value={value}
+        onChange={(event) => onChange(event.target.value)}
+        placeholder={placeholder}
+        autoComplete="new-password"
+        className={`${inputClass} pr-12`}
+      />
+      <button
+        type="button"
+        onClick={() => setVisible((current) => !current)}
+        aria-label={visible ? "Ocultar contraseña" : "Mostrar contraseña"}
+        title={visible ? "Ocultar contraseña" : "Mostrar contraseña"}
+        className="absolute right-2 top-1/2 grid size-9 -translate-y-1/2 cursor-pointer place-items-center rounded-xl text-[#806d62] transition hover:bg-[#f7eee8] hover:text-[#d65a21]"
+      >
+        {visible ? <EyeOff aria-hidden="true" className="size-4" /> : <Eye aria-hidden="true" className="size-4" />}
+      </button>
+    </div>
+  );
+}
 
 function draftFromCredential(credential?: Credential): CredentialDraft {
   return {
@@ -211,7 +243,7 @@ export function CredentialForm({ credential, googleCredentials, onSave, onCreate
               </label>
               <label className="sm:col-span-2">
                 <span className={labelClass}>Contraseña {credential ? <span className="normal-case tracking-normal text-[#a18e82]">(vacía para conservar la actual)</span> : "*"}</span>
-                <input type="password" value={draft.password} onChange={(event) => setField("password", event.target.value)} autoComplete="new-password" className={inputClass} />
+                <SecretInput value={draft.password} onChange={(value) => setField("password", value)} />
               </label>
               <button
                 type="button"
@@ -263,7 +295,7 @@ export function CredentialForm({ credential, googleCredentials, onSave, onCreate
               </div>
               <div className="grid gap-3 sm:grid-cols-2">
                 <input type="email" value={googleEmail} onChange={(event) => { setGoogleEmail(event.target.value); setDuplicateGoogle(null); }} placeholder="Correo Google" autoComplete="off" className={inputClass} />
-                <input type="password" value={googlePassword} onChange={(event) => setGooglePassword(event.target.value)} placeholder="Contraseña de Google" autoComplete="new-password" className={inputClass} />
+                <SecretInput value={googlePassword} onChange={setGooglePassword} placeholder="Contraseña de Google" />
               </div>
               {duplicateGoogle && (
                 <div className="mt-3 rounded-2xl border border-[#efc5ad] bg-white p-3">

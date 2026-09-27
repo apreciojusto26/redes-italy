@@ -5,14 +5,13 @@ import { LockKeyhole } from "lucide-react";
 import { CredentialForm } from "@/components/passwords/CredentialForm";
 import { CredentialList } from "@/components/passwords/CredentialList";
 import { DeleteCredentialDialog } from "@/components/passwords/DeleteCredentialDialog";
-import { ImportPasswords } from "@/components/passwords/ImportPasswords";
 import { PasswordSearch } from "@/components/passwords/PasswordSearch";
 import { PasswordsHeader } from "@/components/passwords/PasswordsHeader";
 import { Toast } from "@/components/passwords/Toast";
 import { VaultUnlock } from "@/components/passwords/VaultUnlock";
 import { useCredentials } from "@/hooks/useCredentials";
 import { useVault } from "@/hooks/useVault";
-import type { Credential, CredentialDraft, ImportedCredential } from "@/types/credential";
+import type { Credential, CredentialDraft } from "@/types/credential";
 
 function normalizeSearch(value: string): string {
   return value
@@ -22,26 +21,6 @@ function normalizeSearch(value: string): string {
     .trim();
 }
 
-function importedDraft(item: ImportedCredential): CredentialDraft {
-  const hasEmail = item.username.includes("@");
-  return {
-    name: item.name,
-    platform: item.name,
-    category: "Importada",
-    url: item.url,
-    provider: null,
-    loginMethod: "password",
-    email: hasEmail ? item.username : "",
-    username: hasEmail ? "" : item.username,
-    password: item.password,
-    loginCredentialId: null,
-    emailCredentialId: null,
-    accessInstructions: "",
-    notes: item.notes,
-    favorite: false,
-  };
-}
-
 export function PasswordsPage() {
   const vault = useVault();
   const credentialsState = useCredentials(vault.key);
@@ -49,7 +28,6 @@ export function PasswordsPage() {
   const [formOpen, setFormOpen] = useState(false);
   const [editingCredential, setEditingCredential] = useState<Credential | null>(null);
   const [deletingCredential, setDeletingCredential] = useState<Credential | null>(null);
-  const [importOpen, setImportOpen] = useState(false);
   const [toast, setToast] = useState("");
   const toastTimeout = useRef<number | null>(null);
 
@@ -170,14 +148,6 @@ export function PasswordsPage() {
     showToast("Cuenta eliminada");
   };
 
-  const importCredentials = async (items: ImportedCredential[]) => {
-    for (const item of items) {
-      await credentialsState.create(importedDraft(item));
-    }
-    setImportOpen(false);
-    showToast(`${items.length} ${items.length === 1 ? "cuenta importada" : "cuentas importadas"}`);
-  };
-
   if (vault.status !== "unlocked" || !vault.key) {
     return (
       <VaultUnlock
@@ -194,7 +164,6 @@ export function PasswordsPage() {
       <PasswordsHeader
         count={credentialsState.credentials.length}
         onCreate={openCreate}
-        onImport={() => setImportOpen(true)}
         onLock={vault.lock}
       />
       <PasswordSearch value={search} onChange={setSearch} resultCount={visibleCredentials.length} />
@@ -246,7 +215,6 @@ export function PasswordsPage() {
         />
       )}
 
-      {importOpen && <ImportPasswords onCancel={() => setImportOpen(false)} onImport={importCredentials} />}
       <Toast message={toast} />
     </div>
   );
