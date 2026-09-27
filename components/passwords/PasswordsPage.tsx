@@ -226,7 +226,6 @@ export function PasswordsPage() {
   return (
     <div className="space-y-4 sm:space-y-5">
       <PasswordsHeader
-        count={credentialsState.credentials.length}
         onCreate={openCreate}
         onLock={vault.lock}
       />
@@ -254,7 +253,7 @@ export function PasswordsPage() {
         onToast={showToast}
       />
 
-      <footer className="flex items-center justify-center gap-2 pb-4 pt-2 text-center text-xs font-semibold text-[#927e72] sm:text-sm">
+      <footer className="flex items-center justify-center gap-2 pb-4 pt-2 text-center text-xs font-semibold text-black sm:text-sm">
         <LockKeyhole aria-hidden="true" className="size-4 text-[#d46530]" />
         Bóveda cifrada · Bloqueo tras 30 minutos de inactividad.
       </footer>

@@ -16,7 +16,7 @@ export function SectionSwitcher({ activeSection, onChange }: SectionSwitcherProp
   return (
     <nav
       aria-label="Secciones de la aplicación"
-      className="relative mx-auto grid min-h-[58px] w-full max-w-[430px] grid-cols-2 rounded-full border border-[#dfd0c4] bg-[#efe6de]/85 p-1.5 shadow-[inset_0_1px_1px_rgba(255,255,255,0.85),0_10px_28px_rgba(73,46,31,0.08)] backdrop-blur-xl"
+      className="relative mx-auto grid min-h-[58px] w-full max-w-[430px] grid-cols-2 rounded-full border border-[#d1d5db] bg-[#f3f4f6]/85 p-1.5 shadow-[inset_0_1px_1px_rgba(255,255,255,0.85),0_10px_28px_rgba(17,24,39,0.08)] backdrop-blur-xl"
     >
       <span
         aria-hidden="true"
@@ -35,7 +35,7 @@ export function SectionSwitcher({ activeSection, onChange }: SectionSwitcherProp
             aria-pressed={isActive}
             onClick={() => onChange(id)}
             className={`relative z-10 flex min-h-11 items-center justify-center gap-2 rounded-full px-3 text-sm font-extrabold transition-colors duration-300 active:scale-[0.98] sm:text-[15px] ${
-              isActive ? "text-white" : "text-[#79675d] hover:text-[#33261f]"
+              isActive ? "text-white" : "text-black"
             }`}
           >
             <Icon aria-hidden="true" className="size-4" strokeWidth={2.2} />

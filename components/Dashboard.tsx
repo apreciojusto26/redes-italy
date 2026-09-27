@@ -70,7 +70,7 @@ export function Dashboard() {
 
             <History days={history} />
 
-            <footer className="flex items-center justify-center gap-2 pb-4 pt-2 text-center text-xs font-semibold text-[#927e72] sm:text-sm" aria-live="polite">
+            <footer className="flex items-center justify-center gap-2 pb-4 pt-2 text-center text-xs font-semibold text-black sm:text-sm" aria-live="polite">
               {syncStatus === "offline" ? (
                 <WifiOff aria-hidden="true" className="size-4 text-[#b06e4f]" />
               ) : syncStatus === "loading" || syncStatus === "saving" ? (

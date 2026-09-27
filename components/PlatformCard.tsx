@@ -24,7 +24,7 @@ function PublicationGroup({
 
   return (
     <div>
-      <h3 className="mb-2.5 text-[10px] font-extrabold uppercase tracking-[0.16em] text-[#a18c7f]">{label}</h3>
+      <h3 className="mb-2.5 text-[10px] font-extrabold uppercase tracking-[0.16em] text-black">{label}</h3>
       <div className="grid grid-cols-2 gap-2.5 max-[370px]:grid-cols-1">
         {items.map((item) => (
           <PublicationCheckbox
@@ -50,19 +50,19 @@ export function PlatformCard({ platform, checks, onToggle, disabled }: PlatformC
   ].filter(Boolean).join(" · ");
 
   return (
-    <article className={`rounded-[24px] border bg-[#fffdfa] p-5 shadow-[0_12px_35px_rgba(75,51,38,0.045)] transition duration-300 hover:shadow-[0_16px_42px_rgba(75,51,38,0.075)] sm:p-6 ${isComplete ? "border-[#cfe3d1]" : "border-[#eadfd4]"}`}>
+    <article className="rounded-[24px] border border-[#d1d5db] bg-white p-5 shadow-[0_12px_35px_rgba(17,24,39,0.045)] transition duration-300 hover:border-[#9ca3af] hover:shadow-[0_16px_42px_rgba(17,24,39,0.075)] sm:p-6">
       <div className="mb-6 flex items-start justify-between gap-4">
         <div className="flex min-w-0 items-center gap-3.5">
           <span className="grid size-12 shrink-0 place-items-center rounded-2xl" style={{ color: platform.accent, backgroundColor: platform.accentSoft }}>
             <BrandIcon icon={platform.icon} className="size-6" />
           </span>
           <div className="min-w-0">
-            <h2 className="truncate text-lg font-extrabold tracking-[-0.025em] text-[#2b201a]">{platform.name}</h2>
-            <p className="mt-0.5 text-xs font-semibold text-[#8c796d]">{description}</p>
+            <h2 className="truncate text-lg font-extrabold tracking-[-0.025em] text-black">{platform.name}</h2>
+            <p className="mt-0.5 text-xs font-semibold text-black">{description}</p>
           </div>
         </div>
 
-        <div className={`flex shrink-0 items-center gap-1.5 rounded-full px-3 py-1.5 text-sm font-extrabold transition-colors ${isComplete ? "bg-[#e7f4e9] text-[#397c47]" : "bg-[#f5eee8] text-[#6f5c51]"}`}>
+        <div className={`flex shrink-0 items-center gap-1.5 rounded-full px-3 py-1.5 text-sm font-extrabold text-black transition-colors ${isComplete ? "bg-[#e7f4e9]" : "bg-[#f3f4f6]"}`}>
           {isComplete && <CheckCircle2 aria-hidden="true" className="size-4" />}
           {completed}/{total}
         </div>

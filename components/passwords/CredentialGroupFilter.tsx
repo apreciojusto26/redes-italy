@@ -16,8 +16,8 @@ export function CredentialGroupFilter({ groups, value, onChange }: CredentialGro
           aria-pressed={value === null}
           className={`min-h-9 cursor-pointer rounded-xl border px-3.5 text-xs font-extrabold transition focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-[#e66a27]/35 ${
             value === null
-              ? "border-[#e66a27] bg-[#e66a27] text-white shadow-[0_5px_14px_rgba(230,106,39,0.16)]"
-              : "border-[#e7d9ce] bg-[#fffdfa] text-[#6f5d53] hover:border-[#dfbca6] hover:bg-[#fff7f0]"
+              ? "border-[#9ca3af] bg-[#e66a27] text-white shadow-[0_5px_14px_rgba(230,106,39,0.16)]"
+              : "border-[#d1d5db] bg-white text-black hover:border-[#9ca3af] hover:bg-[#f9fafb]"
           }`}
         >
           Todas
@@ -33,8 +33,8 @@ export function CredentialGroupFilter({ groups, value, onChange }: CredentialGro
               aria-pressed={selected}
               className={`min-h-9 cursor-pointer rounded-xl border px-3.5 text-xs font-extrabold transition focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-[#e66a27]/35 ${
                 selected
-                  ? "border-[#e66a27] bg-[#fff1e7] text-[#bd4d1d] shadow-[0_4px_12px_rgba(158,67,27,0.08)]"
-                  : "border-[#e7d9ce] bg-[#fffdfa] text-[#6f5d53] hover:border-[#dfbca6] hover:bg-[#fff7f0]"
+                  ? "border-[#9ca3af] bg-[#fff1e7] text-black shadow-[0_4px_12px_rgba(17,24,39,0.08)]"
+                  : "border-[#d1d5db] bg-white text-black hover:border-[#9ca3af] hover:bg-[#f9fafb]"
               }`}
             >
               {group}

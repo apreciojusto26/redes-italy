@@ -51,10 +51,10 @@ export function CopyButton({ getValue, message, onToast, disabled }: CopyButtonP
       disabled={disabled}
       aria-label={message}
       title={message}
-      className={`grid size-8 shrink-0 cursor-pointer place-items-center rounded-[9px] border transition active:scale-95 ${
+      className={`grid size-8 shrink-0 cursor-pointer place-items-center rounded-[9px] transition active:scale-95 ${
         copied
-          ? "border-[#bcd9c2] bg-[#edf7ef] text-[#3e8550]"
-          : "border-[#e7ddd5] bg-white text-[#806d62] hover:border-[#e4b9a0] hover:bg-[#fff8f3] hover:text-[#d65a21]"
+          ? "text-[#3e8550]"
+          : "text-[#6b7280] hover:bg-[#f3f4f6] hover:text-[#d65a21]"
       }`}
     >
       {copied ? <Check aria-hidden="true" className="size-3.5" strokeWidth={2.8} /> : <Copy aria-hidden="true" className="size-3.5" />}

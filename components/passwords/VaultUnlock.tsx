@@ -47,8 +47,8 @@ export function VaultUnlock({ status, error, onSetup, onUnlock }: VaultUnlockPro
 
   if (status === "loading") {
     return (
-      <div className="grid min-h-[420px] place-items-center rounded-[26px] border border-[#eadfd4] bg-[#fffdfa]">
-        <div className="text-center text-[#806d62]">
+      <div className="grid min-h-[420px] place-items-center rounded-[26px] border border-[#e5e7eb] bg-[#fffdfa]">
+        <div className="text-center text-black">
           <LoaderCircle aria-hidden="true" className="mx-auto size-7 animate-spin text-[#e46527]" />
           <p className="mt-3 text-sm font-bold">Preparando la bóveda…</p>
         </div>
@@ -57,7 +57,7 @@ export function VaultUnlock({ status, error, onSetup, onUnlock }: VaultUnlockPro
   }
 
   return (
-    <section className="overflow-hidden rounded-[26px] border border-[#eadfd4] bg-[#fffdfa] shadow-[0_14px_42px_rgba(75,51,38,0.06)]">
+    <section className="overflow-hidden rounded-[26px] border border-[#e5e7eb] bg-[#fffdfa] shadow-[0_14px_42px_rgba(75,51,38,0.06)]">
       <div className="bg-[linear-gradient(135deg,#f18527_0%,#ed6824_52%,#df4d1e_100%)] px-5 py-7 text-white sm:px-8 sm:py-9">
         <div className="mb-5 grid size-12 place-items-center rounded-2xl border border-white/20 bg-white/15 backdrop-blur-sm">
           <LockKeyhole aria-hidden="true" className="size-6" />
@@ -69,7 +69,7 @@ export function VaultUnlock({ status, error, onSetup, onUnlock }: VaultUnlockPro
       </div>
 
       <form onSubmit={submit} className="mx-auto max-w-xl px-5 py-8 sm:px-8 sm:py-10">
-        <div className="mb-6 flex gap-3 rounded-2xl bg-[#f8eee7] p-4 text-[#6f5749]">
+        <div className="mb-6 flex gap-3 rounded-2xl bg-[#f3f4f6] p-4 text-black">
           <ShieldCheck aria-hidden="true" className="mt-0.5 size-5 shrink-0 text-[#dc6429]" />
           <p className="text-sm font-medium leading-6">
             {isSetup
@@ -79,9 +79,9 @@ export function VaultUnlock({ status, error, onSetup, onUnlock }: VaultUnlockPro
         </div>
 
         <label className="block">
-          <span className="mb-2 block text-xs font-extrabold uppercase tracking-[0.12em] text-[#806d62]">Contraseña maestra</span>
-          <span className="flex items-center rounded-2xl border border-[#e7dcd3] bg-white px-3 focus-within:border-[#e89469] focus-within:ring-3 focus-within:ring-[#ed6725]/10">
-            <KeyRound aria-hidden="true" className="size-5 shrink-0 text-[#b09b8e]" />
+          <span className="mb-2 block text-xs font-extrabold uppercase tracking-[0.12em] text-black">Contraseña maestra</span>
+          <span className="flex items-center rounded-2xl border border-[#d1d5db] bg-white px-3 focus-within:border-[#9ca3af] focus-within:ring-3 focus-within:ring-[#ed6725]/10">
+            <KeyRound aria-hidden="true" className="size-5 shrink-0 text-[#6b7280]" />
             <input
               type={visible ? "text" : "password"}
               value={password}
@@ -90,7 +90,7 @@ export function VaultUnlock({ status, error, onSetup, onUnlock }: VaultUnlockPro
               className="min-h-13 min-w-0 flex-1 bg-transparent px-3 text-sm font-bold outline-none"
               autoFocus
             />
-            <button type="button" onClick={() => setVisible((current) => !current)} aria-label={visible ? "Ocultar" : "Mostrar"} className="grid size-10 place-items-center rounded-xl text-[#806d62] hover:bg-[#f8efe9]">
+            <button type="button" onClick={() => setVisible((current) => !current)} aria-label={visible ? "Ocultar" : "Mostrar"} className="grid size-10 place-items-center rounded-xl text-[#6b7280] hover:bg-[#f3f4f6]">
               {visible ? <EyeOff aria-hidden="true" className="size-4" /> : <Eye aria-hidden="true" className="size-4" />}
             </button>
           </span>
@@ -98,13 +98,13 @@ export function VaultUnlock({ status, error, onSetup, onUnlock }: VaultUnlockPro
 
         {isSetup && (
           <label className="mt-4 block">
-            <span className="mb-2 block text-xs font-extrabold uppercase tracking-[0.12em] text-[#806d62]">Repetir contraseña</span>
+            <span className="mb-2 block text-xs font-extrabold uppercase tracking-[0.12em] text-black">Repetir contraseña</span>
             <input
               type={visible ? "text" : "password"}
               value={confirmation}
               onChange={(event) => setConfirmation(event.target.value)}
               autoComplete="new-password"
-              className="min-h-13 w-full rounded-2xl border border-[#e7dcd3] bg-white px-4 text-sm font-bold outline-none transition focus:border-[#e89469] focus:ring-3 focus:ring-[#ed6725]/10"
+              className="min-h-13 w-full rounded-2xl border border-[#d1d5db] bg-white px-4 text-sm font-bold text-black outline-none transition focus:border-[#9ca3af] focus:ring-3 focus:ring-[#ed6725]/10"
             />
           </label>
         )}

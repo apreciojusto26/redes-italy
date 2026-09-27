@@ -46,7 +46,7 @@ export function PasswordField({
   return (
     <div className="flex min-h-8 w-full min-w-0 items-start gap-0.5 sm:w-[280px] sm:flex-none" title={label}>
       <span className="sr-only">{label}</span>
-      <span className={`min-w-0 flex-1 py-2 text-xs font-bold leading-4 ${isVisible ? "break-all whitespace-normal" : "truncate whitespace-nowrap"} ${hasPassword ? "text-[#45362e]" : "text-[#a39084]"}`}>
+      <span className={`min-w-0 flex-1 py-2 text-xs font-bold leading-4 ${isVisible ? "break-all whitespace-normal" : "truncate whitespace-nowrap"} text-black`}>
         {hasPassword ? visiblePassword ?? "••••••••••" : "Sin contraseña"}
       </span>
       <div className="flex shrink-0 items-start gap-0.5">
@@ -56,7 +56,7 @@ export function PasswordField({
           disabled={!hasPassword}
           aria-label={visiblePassword === null ? "Mostrar contraseña" : "Ocultar contraseña"}
           title={visiblePassword === null ? "Mostrar contraseña" : "Ocultar contraseña"}
-          className="grid size-8 shrink-0 cursor-pointer place-items-center rounded-[9px] text-[#806d62] transition hover:bg-[#f0e5dd] hover:text-[#d65a21] disabled:cursor-default disabled:opacity-35"
+          className="grid size-8 shrink-0 cursor-pointer place-items-center rounded-[9px] text-[#6b7280] transition hover:bg-[#f3f4f6] hover:text-[#d65a21] disabled:cursor-default disabled:opacity-35"
         >
           {visiblePassword === null ? <Eye aria-hidden="true" className="size-3.5" /> : <EyeOff aria-hidden="true" className="size-3.5" />}
         </button>

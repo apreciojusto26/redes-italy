@@ -22,7 +22,7 @@ function GoogleLogo() {
 export function LoginMethodField({ value, onChange }: { value: LoginMethod; onChange: (value: LoginMethod) => void }) {
   return (
     <fieldset>
-      <legend className="mb-2 text-xs font-extrabold uppercase tracking-[0.12em] text-[#806d62]">Método de acceso *</legend>
+      <legend className="mb-2 text-xs font-extrabold uppercase tracking-[0.12em] text-black">Método de acceso *</legend>
       <div className="grid grid-cols-2 gap-2">
         {methods.map(({ id, label, icon: Icon }) => {
           const active = value === id;
@@ -35,8 +35,8 @@ export function LoginMethodField({ value, onChange }: { value: LoginMethod; onCh
               onClick={() => onChange(id)}
               className={`flex min-h-12 cursor-pointer items-center gap-2 rounded-2xl border px-3 text-left text-xs font-extrabold transition ${
                 active
-                  ? "border-[#ee9c73] bg-[#fff1e7] text-[#c94f1c]"
-                  : "border-[#e8ddd4] bg-white text-[#756259] hover:border-[#e4bdab]"
+                  ? "border-[#9ca3af] bg-[#fff1e7] text-black"
+                  : "border-[#d1d5db] bg-white text-black hover:border-[#9ca3af]"
               }`}
             >
               {id === "google" ? <GoogleLogo /> : <Icon aria-hidden="true" className="size-4 shrink-0" />}
