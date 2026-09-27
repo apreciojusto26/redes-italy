@@ -52,35 +52,36 @@ interface PlatformLogoProps {
   name: string;
   platform: string;
   url: string;
+  compact?: boolean;
 }
 
-export function PlatformLogo({ name, platform, url }: PlatformLogoProps) {
+export function PlatformLogo({ name, platform, url, compact = false }: PlatformLogoProps) {
   const appearance = getCredentialAppearance(name, platform);
   const vectorLogo = appearance.key ? vectorLogos[appearance.key] : null;
   const domain = (appearance.key && faviconDomains[appearance.key]) || domainFromUrl(url);
 
   return (
     <span
-      className="relative grid size-8 shrink-0 place-items-center overflow-hidden rounded-[10px]"
+      className={`relative grid shrink-0 place-items-center overflow-hidden ${compact ? "size-7 rounded-lg" : "size-8 rounded-[10px]"}`}
       style={{ color: appearance.accent, backgroundColor: appearance.soft }}
     >
       {vectorLogo ? (
         <svg
           viewBox="0 0 24 24"
           aria-label={`Logo de ${vectorLogo.title}`}
-          className="size-[18px]"
+          className={compact ? "size-4" : "size-[18px]"}
           fill={`#${vectorLogo.hex}`}
         >
           <path d={vectorLogo.path} />
         </svg>
       ) : (
         <>
-          <Globe2 aria-hidden="true" className="size-4" />
+          <Globe2 aria-hidden="true" className={compact ? "size-3.5" : "size-4"} />
           {domain && (
             <img
               src={`https://www.google.com/s2/favicons?domain=${encodeURIComponent(domain)}&sz=64`}
               alt={`Logo de ${platform || name}`}
-              className="absolute inset-0 size-full object-contain p-1.5"
+              className={`absolute inset-0 size-full object-contain ${compact ? "p-1" : "p-1.5"}`}
               onError={(event) => { event.currentTarget.style.display = "none"; }}
             />
           )}

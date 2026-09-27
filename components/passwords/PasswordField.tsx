@@ -41,13 +41,15 @@ export function PasswordField({
     }
   };
 
+  const isVisible = visiblePassword !== null;
+
   return (
-    <div className="flex min-w-0 items-center gap-0.5" title={label}>
+    <div className="flex min-h-8 w-full min-w-0 items-start gap-0.5 sm:w-[280px] sm:flex-none" title={label}>
       <span className="sr-only">{label}</span>
-      <span className={`w-20 shrink truncate text-xs font-bold sm:w-24 ${hasPassword ? "text-[#45362e]" : "text-[#a39084]"}`}>
+      <span className={`min-w-0 flex-1 py-2 text-xs font-bold leading-4 ${isVisible ? "break-all whitespace-normal" : "truncate whitespace-nowrap"} ${hasPassword ? "text-[#45362e]" : "text-[#a39084]"}`}>
         {hasPassword ? visiblePassword ?? "••••••••••" : "Sin contraseña"}
       </span>
-      <div className="flex shrink-0 items-center gap-0.5">
+      <div className="flex shrink-0 items-start gap-0.5">
         <button
           type="button"
           onClick={toggleVisibility}

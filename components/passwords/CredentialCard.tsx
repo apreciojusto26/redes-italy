@@ -3,6 +3,7 @@
 import { useState } from "react";
 import {
   AlertTriangle,
+  ArrowRight,
   ChevronRight,
   ExternalLink,
   KeyRound,
@@ -46,23 +47,27 @@ function InlineValue({ label, value, copyMessage, onToast }: InlineValueProps) {
   );
 }
 
-function relatedAccessLabels(credential: Credential, googleCredentialId: string): string[] {
-  const labels: string[] = [];
+function relatedAccessDescription(credential: Credential, googleCredentialId: string): string {
+  const descriptions: string[] = [];
 
   if (credential.loginCredentialId === googleCredentialId) {
-    labels.push(credential.loginMethod === "google" ? "Acceso con Gmail" : "Inicio relacionado");
+    descriptions.push(
+      credential.loginMethod === "google"
+        ? "Usa este Gmail para iniciar sesión"
+        : "Usa esta cuenta para iniciar sesión",
+    );
   }
   if (credential.emailCredentialId === googleCredentialId) {
-    labels.push(
+    descriptions.push(
       credential.loginMethod === "email_code"
-        ? "Código por email"
+        ? "Recibe aquí los códigos de acceso"
         : credential.loginMethod === "magic_link"
-          ? "Magic link por email"
-          : "Correo relacionado",
+          ? "Recibe aquí los enlaces de acceso"
+          : "Usa este Gmail como correo relacionado",
     );
   }
 
-  return labels;
+  return descriptions.join(" · ");
 }
 
 interface CredentialCardProps {
@@ -72,6 +77,8 @@ interface CredentialCardProps {
   onEdit: (credential: Credential) => void;
   onDelete: (credential: Credential) => void;
   onToggleFavorite: (credential: Credential) => void;
+  highlighted: boolean;
+  onNavigateToCredential: (credentialId: string) => void;
   onToast: (message: string) => void;
 }
 
@@ -82,6 +89,8 @@ export function CredentialCard({
   onEdit,
   onDelete,
   onToggleFavorite,
+  highlighted,
+  onNavigateToCredential,
   onToast,
 }: CredentialCardProps) {
   const [expanded, setExpanded] = useState(false);
@@ -97,6 +106,7 @@ export function CredentialCard({
   const normalizedPlatform = credential.platform.trim().toLocaleLowerCase("es");
   const metadata = [
     normalizedPlatform && normalizedPlatform !== normalizedName ? credential.platform : "",
+    credential.groupName,
     credential.category,
   ].filter(Boolean).join(" · ");
   const isGoogleProvider = credential.provider === "google";
@@ -129,7 +139,10 @@ export function CredentialCard({
         : null;
 
   return (
-    <article className="overflow-hidden rounded-[18px] border border-[#eadfd4] bg-[#fffdfa] px-3.5 py-2.5 shadow-[0_5px_18px_rgba(75,51,38,0.035)] transition duration-300 hover:border-[#e2d2c6] hover:shadow-[0_8px_24px_rgba(75,51,38,0.06)] sm:px-4">
+    <article
+      id={`credential-${credential.id}`}
+      className={`overflow-hidden rounded-[18px] border bg-[#fffdfa] px-3.5 py-2.5 transition duration-300 sm:px-4 ${highlighted ? "border-[#ed702f] shadow-[0_0_0_4px_rgba(237,112,47,0.15),0_10px_28px_rgba(158,67,27,0.12)]" : "border-[#eadfd4] shadow-[0_5px_18px_rgba(75,51,38,0.035)] hover:border-[#e2d2c6] hover:shadow-[0_8px_24px_rgba(75,51,38,0.06)]"}`}
+    >
       <div className="flex min-h-8 min-w-0 items-center gap-2.5">
         {isGoogleProvider ? (
           <button
@@ -247,37 +260,26 @@ export function CredentialCard({
 
       {isGoogleProvider && expanded && canExpand && (
         <div id={`linked-credentials-${credential.id}`} className="-mx-3.5 -mb-2.5 mt-2.5 border-t border-[#ebe0d7] bg-[#fbf7f3]/85 px-3.5 py-2.5 sm:-mx-4 sm:px-4">
-          <div className="mb-1.5 flex items-center justify-between gap-3 px-1">
-            <p className="text-[10px] font-extrabold uppercase tracking-[0.12em] text-[#8f7668]">Cuentas vinculadas</p>
-            <span className="text-[10px] font-bold text-[#aa9183]">{relationCountLabel}</span>
-          </div>
+          <p className="mb-1.5 px-1 text-[10px] font-extrabold uppercase tracking-[0.12em] text-[#8f7668]">Cuentas vinculadas · {relatedCredentials.length}</p>
 
           <ul className="divide-y divide-[#e9ded5]" aria-label={`Cuentas vinculadas a ${credential.name}`}>
             {relatedCredentials.map((relatedCredential) => {
-              const accessLabels = relatedAccessLabels(relatedCredential, credential.id);
+              const accessDescription = relatedAccessDescription(relatedCredential, credential.id);
               return (
-                <li key={relatedCredential.id} className="grid min-h-9 grid-cols-[minmax(0,1fr)_auto] items-center gap-x-2 gap-y-0.5 px-1 py-1.5 sm:grid-cols-[minmax(0,1fr)_auto_auto] sm:gap-x-4">
-                  <div className="col-span-2 min-w-0 sm:col-span-1">
+                <li key={relatedCredential.id} className="grid min-h-10 grid-cols-[minmax(0,1fr)_auto] items-center gap-x-2 gap-y-1 px-1 py-1.5 sm:grid-cols-[minmax(170px,0.75fr)_minmax(0,1fr)_auto] sm:gap-x-4">
+                  <div className="col-span-2 flex min-w-0 items-center gap-2 sm:col-span-1">
+                    <PlatformLogo name={relatedCredential.name} platform={relatedCredential.platform} url={relatedCredential.url} compact />
                     <p className="truncate text-xs font-extrabold text-[#49382f]">{relatedCredential.name}</p>
-                    {relatedCredential.platform && relatedCredential.platform.toLocaleLowerCase("es") !== relatedCredential.name.toLocaleLowerCase("es") && (
-                      <p className="truncate text-[10px] font-semibold text-[#9b887d]">{relatedCredential.platform}</p>
-                    )}
                   </div>
-                  <span className="truncate text-[11px] font-bold text-[#7a6356]">{accessLabels.join(" · ")}</span>
-                  {relatedCredential.url ? (
-                    <a
-                      href={relatedCredential.url}
-                      target="_blank"
-                      rel="noreferrer"
-                      title={`Abrir ${relatedCredential.platform || relatedCredential.name}`}
-                      className="inline-flex min-h-7 cursor-pointer items-center gap-1 rounded-lg px-2 text-[11px] font-extrabold text-[#d65a21] transition hover:bg-white"
-                    >
-                      Abrir
-                      <ExternalLink aria-hidden="true" className="size-3" />
-                    </a>
-                  ) : (
-                    <span aria-hidden="true" />
-                  )}
+                  <span className="truncate text-[11px] font-semibold text-[#7a6356]">{accessDescription}</span>
+                  <button
+                    type="button"
+                    onClick={() => onNavigateToCredential(relatedCredential.id)}
+                    className="inline-flex min-h-7 cursor-pointer items-center gap-1 rounded-lg px-2 text-[11px] font-extrabold text-[#d65a21] transition hover:bg-white"
+                  >
+                    Ver cuenta
+                    <ArrowRight aria-hidden="true" className="size-3" />
+                  </button>
                 </li>
               );
             })}

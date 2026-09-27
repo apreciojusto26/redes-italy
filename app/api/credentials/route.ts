@@ -1,5 +1,4 @@
 import { NextRequest, NextResponse } from "next/server";
-import { inferCredentialProvider } from "@/config/credential-platforms";
 import { getTurso, TursoConfigurationError } from "@/lib/turso";
 import type { Credential, CredentialPayload, CredentialProvider, LoginMethod } from "@/types/credential";
 
@@ -42,6 +41,7 @@ function isCredentialPayload(value: unknown): value is CredentialPayload {
     stringWithin(item.name, 160) && item.name.trim().length > 0 &&
     stringWithin(item.platform, 160) &&
     stringWithin(item.category, 160) &&
+    (item.groupName === undefined || stringWithin(item.groupName, 160)) &&
     stringWithin(item.url, 2048) && validWebUrl(item.url) &&
     (item.provider === undefined || item.provider === null || item.provider === "google") &&
     typeof item.loginMethod === "string" && loginMethods.has(item.loginMethod as LoginMethod) &&
@@ -69,6 +69,7 @@ function rowToCredential(row: Record<string, unknown>): Credential {
     name: String(row.name),
     platform: String(row.platform),
     category: String(row.category),
+    groupName: String(row.group_name ?? ""),
     url: String(row.url),
     provider: row.provider === "google" ? "google" : null,
     loginMethod: String(row.login_method) as LoginMethod,
@@ -97,7 +98,7 @@ async function findCredential(id: string) {
 
 function resolvedProvider(payload: CredentialPayload): CredentialProvider {
   if (payload.loginMethod !== "password") return null;
-  return payload.provider ?? inferCredentialProvider(payload.platform, payload.url);
+  return payload.provider ?? null;
 }
 
 async function findDuplicateGoogleCredential(email: string, excludingId?: string): Promise<Credential | null> {
@@ -185,7 +186,11 @@ export async function POST(request: NextRequest) {
   if (!payload) return NextResponse.json({ error: "Datos de credencial no válidos." }, { status: 400 });
 
   try {
-    const normalizedPayload = { ...payload, provider: resolvedProvider(payload) };
+    const normalizedPayload = {
+      ...payload,
+      groupName: payload.groupName ?? "",
+      provider: resolvedProvider(payload),
+    };
     const relationError = await validateRelations(normalizedPayload);
     if (relationError) return NextResponse.json({ error: relationError }, { status: 400 });
     if (normalizedPayload.provider === "google") {
@@ -194,7 +199,7 @@ export async function POST(request: NextRequest) {
     }
     const database = await getTurso();
     const insertArgs = [
-      normalizedPayload.id, normalizedPayload.name.trim(), normalizedPayload.platform.trim(), normalizedPayload.category.trim(), normalizedPayload.url.trim(),
+      normalizedPayload.id, normalizedPayload.name.trim(), normalizedPayload.platform.trim(), normalizedPayload.category.trim(), normalizedPayload.groupName.trim(), normalizedPayload.url.trim(),
       normalizedPayload.provider, normalizedPayload.loginMethod, normalizedPayload.email.trim(), normalizedPayload.username.trim(), normalizedPayload.encryptedPassword,
       normalizedPayload.passwordIv, normalizedPayload.loginCredentialId, normalizedPayload.emailCredentialId,
       normalizedPayload.accessInstructions.trim(), normalizedPayload.notes.trim(), normalizedPayload.favorite ? 1 : 0,
@@ -202,13 +207,13 @@ export async function POST(request: NextRequest) {
     const protectsGoogleIdentity = normalizedPayload.provider === "google" && Boolean(normalizedPayload.email.trim());
     const insertResult = await database.execute({
       sql: `INSERT INTO credentials (
-          id, name, platform, category, url, provider, login_method, email, username,
+          id, name, platform, category, group_name, url, provider, login_method, email, username,
           encrypted_password, password_iv, login_credential_id, email_credential_id,
           access_instructions, notes, favorite
         )
         ${protectsGoogleIdentity
-          ? "SELECT ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ? WHERE NOT EXISTS (SELECT 1 FROM credentials WHERE provider = 'google' AND lower(trim(email)) = ?)"
-          : "VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)"}`,
+          ? "SELECT ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ? WHERE NOT EXISTS (SELECT 1 FROM credentials WHERE provider = 'google' AND lower(trim(email)) = ?)"
+          : "VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)"}`,
       args: protectsGoogleIdentity
         ? [...insertArgs, normalizedPayload.email.trim().toLocaleLowerCase("es")]
         : insertArgs,
@@ -231,7 +236,11 @@ export async function PUT(request: NextRequest) {
   try {
     const existing = await findCredential(payload.id);
     if (!existing) return NextResponse.json({ error: "La credencial no existe." }, { status: 404 });
-    const normalizedPayload = { ...payload, provider: resolvedProvider(payload) };
+    const normalizedPayload = {
+      ...payload,
+      groupName: payload.groupName ?? "",
+      provider: resolvedProvider(payload),
+    };
     const relationError = await validateRelations(normalizedPayload);
     if (relationError) return NextResponse.json({ error: relationError }, { status: 400 });
     const googleIdentityChanged = normalizedPayload.provider === "google" && (
@@ -246,12 +255,12 @@ export async function PUT(request: NextRequest) {
     const database = await getTurso();
     await database.execute({
       sql: `UPDATE credentials SET
-        name = ?, platform = ?, category = ?, url = ?, provider = ?, login_method = ?, email = ?, username = ?,
+        name = ?, platform = ?, category = ?, group_name = ?, url = ?, provider = ?, login_method = ?, email = ?, username = ?,
         encrypted_password = ?, password_iv = ?, login_credential_id = ?, email_credential_id = ?,
         access_instructions = ?, notes = ?, favorite = ?, updated_at = CURRENT_TIMESTAMP
         WHERE id = ?`,
       args: [
-        normalizedPayload.name.trim(), normalizedPayload.platform.trim(), normalizedPayload.category.trim(), normalizedPayload.url.trim(),
+        normalizedPayload.name.trim(), normalizedPayload.platform.trim(), normalizedPayload.category.trim(), normalizedPayload.groupName.trim(), normalizedPayload.url.trim(),
         normalizedPayload.provider, normalizedPayload.loginMethod, normalizedPayload.email.trim(), normalizedPayload.username.trim(), normalizedPayload.encryptedPassword,
         normalizedPayload.passwordIv, normalizedPayload.loginCredentialId, normalizedPayload.emailCredentialId,
         normalizedPayload.accessInstructions.trim(), normalizedPayload.notes.trim(), normalizedPayload.favorite ? 1 : 0, normalizedPayload.id,

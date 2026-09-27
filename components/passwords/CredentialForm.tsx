@@ -1,7 +1,7 @@
 "use client";
 
 import { FormEvent, useEffect, useState } from "react";
-import { Eye, EyeOff, LoaderCircle, Plus, Star, X } from "lucide-react";
+import { ChevronDown, Eye, EyeOff, LoaderCircle, Plus, ShieldCheck, Star, X } from "lucide-react";
 import { GoogleCredentialSelector } from "@/components/passwords/GoogleCredentialSelector";
 import { LoginMethodField } from "@/components/passwords/LoginMethodField";
 import { inferCredentialProvider } from "@/config/credential-platforms";
@@ -9,6 +9,12 @@ import type { Credential, CredentialDraft, LoginMethod } from "@/types/credentia
 
 const inputClass = "min-h-12 w-full rounded-2xl border border-[#e7dcd3] bg-white px-4 text-sm font-bold text-[#3e3028] outline-none transition placeholder:font-medium placeholder:text-[#ae9b90] focus:border-[#e89469] focus:ring-3 focus:ring-[#ed6725]/10";
 const labelClass = "mb-2 block text-xs font-extrabold uppercase tracking-[0.12em] text-[#806d62]";
+
+function capitalizeInitial(value: string): string {
+  const firstCharacter = value.search(/\S/);
+  if (firstCharacter < 0) return value;
+  return `${value.slice(0, firstCharacter)}${value[firstCharacter].toLocaleUpperCase("es")}${value.slice(firstCharacter + 1)}`;
+}
 
 interface SecretInputProps {
   value: string;
@@ -47,6 +53,7 @@ function draftFromCredential(credential?: Credential): CredentialDraft {
     name: credential?.name ?? "",
     platform: credential?.platform ?? "",
     category: credential?.category ?? "",
+    groupName: credential?.groupName ?? "",
     url: credential?.url ?? "",
     provider: credential?.provider ?? null,
     loginMethod: credential?.loginMethod ?? "password",
@@ -64,13 +71,15 @@ function draftFromCredential(credential?: Credential): CredentialDraft {
 interface CredentialFormProps {
   credential?: Credential;
   googleCredentials: Credential[];
+  groupNames: string[];
   onSave: (draft: CredentialDraft) => Promise<void>;
-  onCreateGoogle: (email: string, password: string) => Promise<Credential>;
+  onCreateGoogle: (email: string, password: string, groupName: string) => Promise<Credential>;
   onCancel: () => void;
 }
 
-export function CredentialForm({ credential, googleCredentials, onSave, onCreateGoogle, onCancel }: CredentialFormProps) {
+export function CredentialForm({ credential, googleCredentials, groupNames, onSave, onCreateGoogle, onCancel }: CredentialFormProps) {
   const [draft, setDraft] = useState(() => draftFromCredential(credential));
+  const [creatingGroup, setCreatingGroup] = useState(false);
   const [submitting, setSubmitting] = useState(false);
   const [error, setError] = useState("");
   const [addingGoogle, setAddingGoogle] = useState(false);
@@ -79,7 +88,8 @@ export function CredentialForm({ credential, googleCredentials, onSave, onCreate
   const [creatingGoogle, setCreatingGoogle] = useState(false);
   const [duplicateGoogle, setDuplicateGoogle] = useState<Credential | null>(null);
   const googleProviderDetected = inferCredentialProvider(draft.platform, draft.url) === "google";
-  const isGoogleProvider = draft.provider === "google" || googleProviderDetected;
+  const isGoogleProvider = draft.provider === "google";
+  const showGoogleProviderOption = googleProviderDetected || isGoogleProvider;
 
   useEffect(() => {
     const onKeyDown = (event: KeyboardEvent) => {
@@ -93,18 +103,26 @@ export function CredentialForm({ credential, googleCredentials, onSave, onCreate
     setDraft((current) => ({ ...current, [key]: value }));
   };
 
+  const setCapitalizedField = (
+    key: "name" | "category" | "groupName" | "accessInstructions" | "notes",
+    value: string,
+  ) => {
+    setField(key, capitalizeInitial(value));
+  };
+
   const changeMethod = (method: LoginMethod) => {
     setDraft((current) => ({ ...current, loginMethod: method }));
   };
 
   const changePlatform = (platform: string) => {
+    const normalizedPlatform = capitalizeInitial(platform);
     setDraft((current) => {
       const previousWasDetected = inferCredentialProvider(current.platform, current.url) === "google";
-      const detectedProvider = inferCredentialProvider(platform, current.url);
+      const detectedProvider = inferCredentialProvider(normalizedPlatform, current.url);
       return {
         ...current,
-        platform,
-        provider: detectedProvider ?? (previousWasDetected ? null : current.provider),
+        platform: normalizedPlatform,
+        provider: previousWasDetected && !detectedProvider ? null : current.provider,
       };
     });
   };
@@ -116,7 +134,7 @@ export function CredentialForm({ credential, googleCredentials, onSave, onCreate
       return {
         ...current,
         url,
-        provider: detectedProvider ?? (previousWasDetected ? null : current.provider),
+        provider: previousWasDetected && !detectedProvider ? null : current.provider,
       };
     });
   };
@@ -180,7 +198,7 @@ export function CredentialForm({ credential, googleCredentials, onSave, onCreate
 
     setCreatingGoogle(true);
     try {
-      const created = await onCreateGoogle(googleEmail.trim(), googlePassword);
+      const created = await onCreateGoogle(googleEmail.trim(), googlePassword, draft.groupName.trim());
       selectGoogleCredential(created);
     } catch (reason) {
       const duplicate = reason && typeof reason === "object" && "existingCredential" in reason
@@ -213,7 +231,7 @@ export function CredentialForm({ credential, googleCredentials, onSave, onCreate
           <div className="grid gap-4 sm:grid-cols-2">
             <label>
               <span className={labelClass}>Nombre *</span>
-              <input value={draft.name} onChange={(event) => setField("name", event.target.value)} placeholder="Temu" className={inputClass} autoFocus />
+              <input value={draft.name} onChange={(event) => setCapitalizedField("name", event.target.value)} placeholder="Temu" className={inputClass} autoFocus />
             </label>
             <label>
               <span className={labelClass}>Plataforma</span>
@@ -221,7 +239,52 @@ export function CredentialForm({ credential, googleCredentials, onSave, onCreate
             </label>
             <label>
               <span className={labelClass}>Categoría</span>
-              <input value={draft.category} onChange={(event) => setField("category", event.target.value)} placeholder="Compras, redes, hosting…" className={inputClass} />
+              <input value={draft.category} onChange={(event) => setCapitalizedField("category", event.target.value)} placeholder="Compras, redes, hosting…" className={inputClass} />
+            </label>
+            <label>
+              <span className={labelClass}>Grupo / Proyecto</span>
+              {creatingGroup ? (
+                <span className="block space-y-2">
+                  <input
+                    value={draft.groupName}
+                    onChange={(event) => setCapitalizedField("groupName", event.target.value)}
+                    placeholder="Nombre del nuevo grupo"
+                    className={inputClass}
+                    autoFocus
+                  />
+                  <button
+                    type="button"
+                    onClick={() => {
+                      setCreatingGroup(false);
+                      setField("groupName", "");
+                    }}
+                    className="cursor-pointer text-xs font-bold text-[#c85b28] transition hover:text-[#9f421b]"
+                  >
+                    Elegir un grupo existente
+                  </button>
+                </span>
+              ) : (
+                <span className="relative block">
+                  <select
+                    value={draft.groupName}
+                    style={{ fontWeight: draft.groupName ? 400 : 500 }}
+                    onChange={(event) => {
+                      if (event.target.value === "__create_group__") {
+                        setField("groupName", "");
+                        setCreatingGroup(true);
+                        return;
+                      }
+                      setField("groupName", event.target.value);
+                    }}
+                    className={`min-h-12 w-full cursor-pointer appearance-none rounded-2xl border border-[#e7dcd3] bg-white py-2 pl-4 pr-12 text-sm font-bold outline-none transition focus:border-[#e89469] focus:ring-3 focus:ring-[#ed6725]/10 ${draft.groupName ? "text-[#3e3028]" : "text-[#ae9b90]"}`}
+                  >
+                    <option value="" className="text-[#8f7c71]">Sin grupo</option>
+                    {groupNames.map((groupName) => <option key={groupName} value={groupName} className="text-[#3e3028]">{groupName}</option>)}
+                    <option value="__create_group__" className="text-[#3e3028]">+ Crear nuevo grupo…</option>
+                  </select>
+                  <ChevronDown aria-hidden="true" className="pointer-events-none absolute right-4 top-1/2 size-4 -translate-y-1/2 text-[#8d796e]" />
+                </span>
+              )}
             </label>
             <label>
               <span className={labelClass}>URL</span>
@@ -245,17 +308,29 @@ export function CredentialForm({ credential, googleCredentials, onSave, onCreate
                 <span className={labelClass}>Contraseña {credential ? <span className="normal-case tracking-normal text-[#a18e82]">(vacía para conservar la actual)</span> : "*"}</span>
                 <SecretInput value={draft.password} onChange={(value) => setField("password", value)} />
               </label>
-              <button
-                type="button"
-                onClick={() => setField("provider", googleProviderDetected ? "google" : isGoogleProvider ? null : "google")}
-                className={`sm:col-span-2 flex min-h-12 items-center gap-3 rounded-2xl border px-4 text-left transition ${googleProviderDetected ? "cursor-default" : "cursor-pointer"} ${isGoogleProvider ? "border-[#9abce9] bg-[#f0f6ff]" : "border-[#e7dcd3] bg-white hover:border-[#d9c8bc]"}`}
-              >
-                <span className={`size-5 shrink-0 rounded-full border-2 ${isGoogleProvider ? "border-[#4285f4] bg-[#4285f4] shadow-[inset_0_0_0_4px_white]" : "border-[#d5c7bd]"}`} />
-                <span>
-                  <span className="block text-sm font-extrabold text-[#403128]">Cuenta Google / Gmail</span>
-                  <span className="block text-xs font-semibold text-[#8f7c71]">{googleProviderDetected ? "Detectada automáticamente por la plataforma." : "Permitir usarla en “Continuar con Google”."}</span>
-                </span>
-              </button>
+              {showGoogleProviderOption && (
+                <div className="sm:col-span-2 flex min-h-12 items-center gap-3 rounded-2xl border border-[#9abce9] bg-[#f0f6ff] px-4">
+                  <ShieldCheck aria-hidden="true" className="size-5 shrink-0 text-[#4285f4]" />
+                  <span className="min-w-0 flex-1">
+                    <span className="block text-sm font-extrabold text-[#403128]">Usar como cuenta Google / Gmail</span>
+                    <span className="block text-xs font-semibold text-[#8f7c71]">
+                      {isGoogleProvider
+                        ? "Activada para utilizarla en “Continuar con Google”."
+                        : "La plataforma parece ser Google. Actívala solo si quieres reutilizarla."}
+                    </span>
+                  </span>
+                  <button
+                    type="button"
+                    role="switch"
+                    aria-checked={isGoogleProvider}
+                    aria-label={isGoogleProvider ? "Desactivar como cuenta Google" : "Activar como cuenta Google"}
+                    onClick={() => setField("provider", isGoogleProvider ? null : "google")}
+                    className={`relative h-7 w-12 shrink-0 cursor-pointer rounded-full border transition-colors focus-visible:outline-none focus-visible:ring-3 focus-visible:ring-[#4285f4]/20 ${isGoogleProvider ? "border-[#5db77d] bg-[#69c98b]" : "border-[#cfc5bd] bg-[#ddd5cf]"}`}
+                  >
+                    <span className={`absolute left-0 top-0.5 size-[22px] rounded-full bg-white shadow-[0_2px_6px_rgba(60,45,36,0.22)] transition-transform ${isGoogleProvider ? "translate-x-[22px]" : "translate-x-0.5"}`} />
+                  </button>
+                </div>
+              )}
             </div>
           )}
 
@@ -318,13 +393,13 @@ export function CredentialForm({ credential, googleCredentials, onSave, onCreate
           {draft.loginMethod === "other" && (
             <label>
               <span className={labelClass}>Descripción manual *</span>
-              <textarea value={draft.accessInstructions} onChange={(event) => setField("accessInstructions", event.target.value)} rows={4} placeholder="Explica cómo iniciar sesión…" className={`${inputClass} resize-y py-3`} />
+              <textarea value={draft.accessInstructions} onChange={(event) => setCapitalizedField("accessInstructions", event.target.value)} rows={4} placeholder="Explica cómo iniciar sesión…" className={`${inputClass} resize-y py-3`} />
             </label>
           )}
 
           <label>
             <span className={labelClass}>Notas</span>
-            <textarea value={draft.notes} onChange={(event) => setField("notes", event.target.value)} rows={3} placeholder="Información útil para encontrar o usar esta cuenta…" className={`${inputClass} resize-y py-3`} />
+            <textarea value={draft.notes} onChange={(event) => setCapitalizedField("notes", event.target.value)} rows={3} placeholder="Información útil para encontrar o usar esta cuenta…" className={`${inputClass} resize-y py-3`} />
           </label>
 
           <button type="button" onClick={() => setField("favorite", !draft.favorite)} className={`flex min-h-12 w-full items-center gap-3 rounded-2xl border px-4 text-left text-sm font-extrabold transition ${draft.favorite ? "border-[#efba93] bg-[#fff3e8] text-[#cf571f]" : "border-[#e7dcd3] bg-white text-[#746157]"}`}>

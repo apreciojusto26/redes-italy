@@ -7,7 +7,7 @@ import type { VaultConfiguration } from "@/types/credential";
 
 export type VaultStatus = "loading" | "setup" | "locked" | "unlocked" | "error";
 
-const AUTO_LOCK_MS = 10 * 60 * 1000;
+const AUTO_LOCK_MS = 30 * 60 * 1000;
 
 export function useVault() {
   const [status, setStatus] = useState<VaultStatus>("loading");
@@ -51,10 +51,16 @@ export function useVault() {
 
     window.addEventListener("pointerdown", registerActivity, { passive: true });
     window.addEventListener("keydown", registerActivity);
+    window.addEventListener("input", registerActivity);
+    window.addEventListener("scroll", registerActivity, { passive: true });
+    window.addEventListener("touchstart", registerActivity, { passive: true });
     return () => {
       window.clearInterval(intervalId);
       window.removeEventListener("pointerdown", registerActivity);
       window.removeEventListener("keydown", registerActivity);
+      window.removeEventListener("input", registerActivity);
+      window.removeEventListener("scroll", registerActivity);
+      window.removeEventListener("touchstart", registerActivity);
     };
   }, [key, lock]);
 

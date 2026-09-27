@@ -51,6 +51,7 @@ export async function getTurso(): Promise<Client> {
           name TEXT NOT NULL,
           platform TEXT NOT NULL DEFAULT '',
           category TEXT NOT NULL DEFAULT '',
+          group_name TEXT NOT NULL DEFAULT '',
           url TEXT NOT NULL DEFAULT '',
           provider TEXT,
           login_method TEXT NOT NULL,
@@ -84,21 +85,19 @@ export async function getTurso(): Promise<Client> {
       }
     }
 
+    const hasGroupName = credentialColumns.rows.some((row) => String(row.name) === "group_name");
+    if (!hasGroupName) {
+      try {
+        await client.execute("ALTER TABLE credentials ADD COLUMN group_name TEXT NOT NULL DEFAULT ''");
+      } catch (error) {
+        const message = error instanceof Error ? error.message.toLocaleLowerCase("es") : "";
+        if (!message.includes("duplicate column")) throw error;
+      }
+    }
+
     await client.batch([
-      {
-        sql: `UPDATE credentials
-          SET provider = 'google'
-          WHERE provider IS NULL
-            AND login_method = 'password'
-            AND (
-              lower(trim(platform)) IN ('google', 'gmail', 'google / gmail', 'google/gmail', 'cuenta google', 'google workspace')
-              OR lower(trim(name)) IN ('google', 'gmail', 'google / gmail', 'cuenta google')
-              OR lower(url) LIKE '%mail.google.com%'
-              OR lower(url) LIKE '%accounts.google.com%'
-            )`,
-        args: [],
-      },
       "CREATE INDEX IF NOT EXISTS credentials_provider_idx ON credentials(provider)",
+      "CREATE INDEX IF NOT EXISTS credentials_group_name_idx ON credentials(group_name)",
     ], "write");
   })();
 

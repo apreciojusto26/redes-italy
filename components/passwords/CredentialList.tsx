@@ -12,6 +12,8 @@ interface CredentialListProps {
   onEdit: (credential: Credential) => void;
   onDelete: (credential: Credential) => void;
   onToggleFavorite: (credential: Credential) => void;
+  highlightedCredentialId: string | null;
+  onNavigateToCredential: (credentialId: string) => void;
   onToast: (message: string) => void;
 }
 
@@ -25,6 +27,8 @@ export function CredentialList({
   onEdit,
   onDelete,
   onToggleFavorite,
+  highlightedCredentialId,
+  onNavigateToCredential,
   onToast,
 }: CredentialListProps) {
   const credentialMap = new Map(allCredentials.map((credential) => [credential.id, credential]));
@@ -65,6 +69,8 @@ export function CredentialList({
           onEdit={onEdit}
           onDelete={onDelete}
           onToggleFavorite={onToggleFavorite}
+          highlighted={highlightedCredentialId === credential.id}
+          onNavigateToCredential={onNavigateToCredential}
           onToast={onToast}
         />
       ))}

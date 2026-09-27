@@ -8,7 +8,6 @@ import {
   updateCredential as updateCredentialRequest,
 } from "@/lib/credential-api";
 import { encryptPassword } from "@/lib/credential-crypto";
-import { inferCredentialProvider } from "@/config/credential-platforms";
 import type { Credential, CredentialDraft, CredentialPayload } from "@/types/credential";
 
 function payloadFromCredential(credential: Credential): CredentialPayload {
@@ -17,6 +16,7 @@ function payloadFromCredential(credential: Credential): CredentialPayload {
     name: credential.name,
     platform: credential.platform,
     category: credential.category,
+    groupName: credential.groupName,
     url: credential.url,
     provider: credential.provider,
     loginMethod: credential.loginMethod,
@@ -97,17 +97,14 @@ export function useCredentials(key: CryptoKey | null) {
     }
 
     const normalizedUrl = normalizeUrl(draft.url);
-    const inferredProvider = draft.loginMethod === "password"
-      ? inferCredentialProvider(draft.platform, normalizedUrl)
-      : null;
-
     return {
       id: existing?.id ?? window.crypto.randomUUID(),
       name: draft.name,
       platform: draft.platform,
       category: draft.category,
+      groupName: draft.groupName,
       url: normalizedUrl,
-      provider: draft.loginMethod === "password" ? draft.provider ?? inferredProvider : null,
+      provider: draft.loginMethod === "password" ? draft.provider : null,
       loginMethod: draft.loginMethod,
       email: draft.email,
       username: draft.username,

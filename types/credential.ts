@@ -6,6 +6,7 @@ export interface Credential {
   name: string;
   platform: string;
   category: string;
+  groupName: string;
   url: string;
   provider: CredentialProvider;
   loginMethod: LoginMethod;
@@ -26,6 +27,7 @@ export interface CredentialDraft {
   name: string;
   platform: string;
   category: string;
+  groupName: string;
   url: string;
   provider: CredentialProvider;
   loginMethod: LoginMethod;
