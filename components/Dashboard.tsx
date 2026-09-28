@@ -4,14 +4,13 @@ import { useCallback, useEffect, useMemo, useState } from "react";
 import { CloudCheck, LoaderCircle, WifiOff } from "lucide-react";
 import { DailyProgress } from "@/components/DailyProgress";
 import { Header } from "@/components/Header";
-import { History } from "@/components/History";
 import { PlatformCard } from "@/components/PlatformCard";
 import { PasswordsPage } from "@/components/passwords/PasswordsPage";
 import { ResetDayDialog } from "@/components/ResetDayDialog";
 import { SectionSwitcher, type AppSection } from "@/components/SectionSwitcher";
 import { dailyPublicationTotal, platforms } from "@/config/platforms";
 import { useDailyPublications } from "@/hooks/useDailyPublications";
-import { getRecentDateKeys, getTodayKey } from "@/lib/dates";
+import { getTodayKey } from "@/lib/dates";
 import { createDailySummary } from "@/lib/progress";
 
 const syncMessages = {
@@ -25,15 +24,8 @@ export function Dashboard() {
   const [activeSection, setActiveSection] = useState<AppSection>("social");
   const [selectedDate, setSelectedDate] = useState(getTodayKey);
   const [resetDialogOpen, setResetDialogOpen] = useState(false);
-  const { checks, days, syncStatus, isReady, toggle, reset } = useDailyPublications(selectedDate);
+  const { checks, syncStatus, isReady, toggle, reset } = useDailyPublications(selectedDate);
   const summary = useMemo(() => createDailySummary(selectedDate, checks), [selectedDate, checks]);
-
-  const history = useMemo(() => {
-    const dateKeys = getRecentDateKeys(7);
-    const storedDays = { ...days };
-    if (dateKeys.includes(selectedDate)) storedDays[selectedDate] = checks;
-    return dateKeys.map((dateKey) => createDailySummary(dateKey, storedDays[dateKey] ?? {}));
-  }, [checks, days, selectedDate]);
 
   const closeResetDialog = useCallback(() => setResetDialogOpen(false), []);
 
@@ -41,6 +33,12 @@ export function Dashboard() {
     const intervalId = window.setInterval(() => setSelectedDate(getTodayKey()), 60_000);
     return () => window.clearInterval(intervalId);
   }, []);
+
+  useEffect(() => {
+    document.title = activeSection === "passwords"
+      ? "Contraseñas · Italy Pizza"
+      : "Redes Italy · Italy Pizza";
+  }, [activeSection]);
 
   const confirmReset = () => {
     reset();
@@ -67,8 +65,6 @@ export function Dashboard() {
                 />
               ))}
             </section>
-
-            <History days={history} />
 
             <footer className="flex items-center justify-center gap-2 pb-4 pt-2 text-center text-xs font-semibold text-black sm:text-sm" aria-live="polite">
               {syncStatus === "offline" ? (
