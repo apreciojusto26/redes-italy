@@ -44,7 +44,15 @@ export const vividiaPlatforms: PlatformConfig[] = platforms.map((platform) => ({
   id: `vividia-${platform.id}`,
 }));
 
-export const allPlatforms: PlatformConfig[] = [...platforms, ...vividiaPlatforms];
+export const bamzukPlatforms: PlatformConfig[] = platforms
+  .filter((platform) => platform.id === "tiktok")
+  .map((platform) => ({
+    ...platform,
+    id: `bamzuk-${platform.id}`,
+    name: "TikTok Shop",
+  }));
+
+export const allPlatforms: PlatformConfig[] = [...platforms, ...vividiaPlatforms, ...bamzukPlatforms];
 
 function createItems(kind: PublicationKind, amount: number): PublicationItem[] {
   const noun = kind === "video" ? "Video" : "Historia";
@@ -81,3 +89,4 @@ export function getDailyPublicationTotal(platformList: PlatformConfig[]): number
 
 export const dailyPublicationTotal = getDailyPublicationTotal(platforms);
 export const vividiaDailyPublicationTotal = getDailyPublicationTotal(vividiaPlatforms);
+export const bamzukDailyPublicationTotal = getDailyPublicationTotal(bamzukPlatforms);

@@ -1,5 +1,7 @@
 import type { CredentialProvider } from "@/types/credential";
 
+export const GMAIL_INBOX_URL = "https://mail.google.com/mail/u/0/";
+
 interface CredentialAppearance {
   key: string | null;
   accent: string;

@@ -4,10 +4,10 @@ import { FormEvent, useEffect, useState } from "react";
 import { ChevronDown, Eye, EyeOff, LoaderCircle, Plus, ShieldCheck, Star, X } from "lucide-react";
 import { GoogleCredentialSelector } from "@/components/passwords/GoogleCredentialSelector";
 import { LoginMethodField } from "@/components/passwords/LoginMethodField";
-import { inferCredentialProvider, isSocialCredential, isWebsitePlatform } from "@/config/credential-platforms";
+import { GMAIL_INBOX_URL, inferCredentialProvider, isSocialCredential, isWebsitePlatform } from "@/config/credential-platforms";
 import type { Credential, CredentialDraft, LoginMethod } from "@/types/credential";
 
-const inputClass = "min-h-12 w-full rounded-2xl border border-[#d1d5db] bg-white px-4 text-sm font-bold text-black outline-none transition placeholder:font-medium placeholder:text-[#6b7280] focus:border-[#9ca3af] focus:ring-3 focus:ring-[#ed6725]/10";
+const inputClass = "min-h-12 w-full rounded-2xl border border-[#d1d5db] bg-white px-4 text-sm font-bold text-black outline-none transition placeholder:font-medium placeholder:text-[#6b7280] focus:border-[#9ca3af] focus:ring-3 focus:ring-[#3976c7]/10";
 const labelClass = "mb-2 block text-xs font-extrabold uppercase tracking-[0.12em] text-black";
 
 function capitalizeInitial(value: string): string {
@@ -40,7 +40,7 @@ function SecretInput({ value, onChange, placeholder }: SecretInputProps) {
         onClick={() => setVisible((current) => !current)}
         aria-label={visible ? "Ocultar contraseña" : "Mostrar contraseña"}
         title={visible ? "Ocultar contraseña" : "Mostrar contraseña"}
-        className="absolute right-2 top-1/2 grid size-9 -translate-y-1/2 cursor-pointer place-items-center rounded-xl text-[#6b7280] transition hover:bg-[#f3f4f6] hover:text-[#d65a21]"
+        className="absolute right-2 top-1/2 grid size-9 -translate-y-1/2 cursor-pointer place-items-center rounded-xl text-[#6b7280] transition hover:bg-[#f3f4f6] hover:text-[#3976c7]"
       >
         {visible ? <EyeOff aria-hidden="true" className="size-4" /> : <Eye aria-hidden="true" className="size-4" />}
       </button>
@@ -54,7 +54,9 @@ function draftFromCredential(credential?: Credential): CredentialDraft {
     platform: credential?.platform ?? "",
     category: credential?.category ?? "",
     groupName: credential?.groupName ?? "",
-    url: credential?.url ?? "",
+    url: credential && (credential.provider === "google" || inferCredentialProvider(credential.platform, credential.url) === "google")
+      ? GMAIL_INBOX_URL
+      : credential?.url ?? "",
     provider: credential?.provider ?? null,
     loginMethod: credential?.loginMethod ?? "password",
     email: credential?.email ?? "",
@@ -187,7 +189,7 @@ export function CredentialForm({ credential, googleCredentials, groupNames, onSa
       if (creatingGroup && draft.groupName.trim()) {
         await onCreateGroup(draft.groupName.trim(), newGroupColor);
       }
-      await onSave(draft);
+      await onSave(draft.provider === "google" ? { ...draft, url: GMAIL_INBOX_URL } : draft);
     } catch (reason) {
       setError(reason instanceof Error ? reason.message : "No se pudo guardar la cuenta.");
     } finally {
@@ -274,7 +276,7 @@ export function CredentialForm({ credential, googleCredentials, groupNames, onSa
                       setCreatingGroup(false);
                       setField("groupName", "");
                     }}
-                    className="cursor-pointer text-xs font-bold text-[#c85b28] transition hover:text-[#9f421b]"
+                    className="cursor-pointer text-xs font-bold text-[#3976c7] transition hover:text-[#285da8]"
                   >
                     Elegir un grupo existente
                   </button>
@@ -292,7 +294,7 @@ export function CredentialForm({ credential, googleCredentials, groupNames, onSa
                       }
                       setField("groupName", event.target.value);
                     }}
-                    className={`min-h-12 w-full cursor-pointer appearance-none rounded-2xl border border-[#d1d5db] bg-white py-2 pl-4 pr-12 text-sm font-bold outline-none transition focus:border-[#9ca3af] focus:ring-3 focus:ring-[#ed6725]/10 ${draft.groupName ? "text-black" : "text-[#6b7280]"}`}
+                    className={`min-h-12 w-full cursor-pointer appearance-none rounded-2xl border border-[#d1d5db] bg-white py-2 pl-4 pr-12 text-sm font-bold outline-none transition focus:border-[#9ca3af] focus:ring-3 focus:ring-[#3976c7]/10 ${draft.groupName ? "text-black" : "text-[#6b7280]"}`}
                   >
                     <option value="" className="text-black">Sin grupo</option>
                     {groupNames.map((groupName) => <option key={groupName} value={groupName} className="text-black">{groupName}</option>)}
@@ -384,7 +386,7 @@ export function CredentialForm({ credential, googleCredentials, groupNames, onSa
           )}
 
           {addingGoogle && (
-            <div className="rounded-[22px] border border-[#d1d5db] bg-[#fff6ef] p-4 sm:p-5">
+            <div className="rounded-[22px] border border-[#d1d5db] bg-[#f1f6fd] p-4 sm:p-5">
               <div className="mb-4 flex items-center justify-between gap-3">
                 <div>
                   <h3 className="font-extrabold text-black">Crear nueva cuenta Google</h3>
@@ -398,9 +400,9 @@ export function CredentialForm({ credential, googleCredentials, groupNames, onSa
               </div>
               {duplicateGoogle && (
                 <div className="mt-3 rounded-2xl border border-[#d1d5db] bg-white p-3">
-                  <p className="text-sm font-extrabold text-[#9d522f]">Esta cuenta Google ya está guardada.</p>
+                  <p className="text-sm font-extrabold text-[#285da8]">Esta cuenta Google ya está guardada.</p>
                   <p className="mt-0.5 truncate text-xs font-semibold text-[#6b7280]">{duplicateGoogle.email} · {duplicateGoogle.name}</p>
-                  <button type="button" onClick={() => selectGoogleCredential(duplicateGoogle)} className="mt-2 min-h-10 cursor-pointer rounded-xl bg-[#e65e23] px-4 text-sm font-extrabold text-white hover:bg-[#d9511b]">
+                  <button type="button" onClick={() => selectGoogleCredential(duplicateGoogle)} className="mt-2 min-h-10 cursor-pointer rounded-xl bg-[#3976c7] px-4 text-sm font-extrabold text-white hover:bg-[#2d63ad]">
                     Usar esta cuenta
                   </button>
                 </div>
@@ -435,7 +437,7 @@ export function CredentialForm({ credential, googleCredentials, groupNames, onSa
                 {notesOpen ? "Ocultar nota" : "Agregar nota"}
               </button>
 
-              <button type="button" onClick={() => setField("favorite", !draft.favorite)} className={`inline-flex min-h-9 w-fit cursor-pointer items-center gap-2 text-sm font-bold transition ${draft.favorite ? "text-[#e66a27]" : "text-[#6b7280] hover:text-black"}`}>
+              <button type="button" onClick={() => setField("favorite", !draft.favorite)} className={`inline-flex min-h-9 w-fit cursor-pointer items-center gap-2 text-sm font-bold transition ${draft.favorite ? "text-[#3976c7]" : "text-[#6b7280] hover:text-black"}`}>
                 <Star aria-hidden="true" className="size-5" fill={draft.favorite ? "currentColor" : "none"} />
                 {draft.favorite ? "Cuenta favorita" : "Marcar como favorita"}
               </button>
@@ -446,7 +448,7 @@ export function CredentialForm({ credential, googleCredentials, groupNames, onSa
 
           <div className="grid grid-cols-2 gap-3 border-t border-[#d1d5db] pt-5">
             <button type="button" onClick={onCancel} disabled={submitting} className="min-h-12 rounded-2xl border border-[#d1d5db] bg-white px-4 text-sm font-extrabold text-black transition hover:bg-[#f3f4f6]">Cancelar</button>
-            <button type="submit" disabled={submitting} className="flex min-h-12 items-center justify-center gap-2 rounded-2xl bg-[#e65e23] px-4 text-sm font-extrabold text-white shadow-[0_8px_20px_rgba(218,83,27,0.2)] transition hover:bg-[#d9511b] disabled:opacity-60">
+            <button type="submit" disabled={submitting} className="flex min-h-12 items-center justify-center gap-2 rounded-2xl bg-[#3976c7] px-4 text-sm font-extrabold text-white shadow-[0_8px_20px_rgba(38,89,166,0.2)] transition hover:bg-[#2d63ad] disabled:opacity-60">
               {submitting && <LoaderCircle aria-hidden="true" className="size-4 animate-spin" />}
               {credential ? "Guardar cambios" : "Crear cuenta"}
             </button>

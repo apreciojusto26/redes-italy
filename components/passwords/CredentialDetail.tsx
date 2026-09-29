@@ -17,6 +17,7 @@ import { CopyButton } from "@/components/passwords/CopyButton";
 import { PasswordField } from "@/components/passwords/PasswordField";
 import { PlatformLogo } from "@/components/passwords/PlatformLogo";
 import { getCredentialGroupAppearance } from "@/config/credential-groups";
+import { GMAIL_INBOX_URL, inferCredentialProvider } from "@/config/credential-platforms";
 import type { Credential, LoginMethod } from "@/types/credential";
 
 const methodContent: Record<LoginMethod, { label: string; description: string; icon: typeof KeyRound }> = {
@@ -147,6 +148,9 @@ export function CredentialDetail({
     ? credentialMap.get(credential.emailCredentialId) ?? null
     : null;
   const isGoogleProvider = credential.provider === "google";
+  const openUrl = isGoogleProvider || inferCredentialProvider(credential.platform, credential.url) === "google"
+    ? GMAIL_INBOX_URL
+    : credential.url;
   const headerCategory = credential.groupName || credential.category;
   const groupAppearance = getCredentialGroupAppearance(headerCategory, groupColor);
   const relatedCredentials = isGoogleProvider
@@ -198,7 +202,7 @@ export function CredentialDetail({
               onClick={() => onToggleFavorite(credential)}
               aria-label={credential.favorite ? "Quitar de favoritas" : "Marcar como favorita"}
               title={credential.favorite ? "Quitar de favoritas" : "Marcar como favorita"}
-              className={`grid size-9 place-items-center rounded-full transition hover:bg-[#f3f4f6] ${credential.favorite ? "text-[#e66a27]" : "text-[#6b7280]"}`}
+              className={`grid size-9 place-items-center rounded-full transition hover:bg-[#f3f4f6] ${credential.favorite ? "text-[#3976c7]" : "text-[#6b7280]"}`}
             >
               <Star aria-hidden="true" className="size-4" fill={credential.favorite ? "currentColor" : "none"} />
             </button>
@@ -253,9 +257,9 @@ export function CredentialDetail({
               )}
             </div>
 
-            {credential.url && (
+            {openUrl && (
               <a
-                href={credential.url}
+                href={openUrl}
                 target="_blank"
                 rel="noreferrer"
                 className="mt-3 inline-flex min-h-11 items-center justify-center gap-2 rounded-full bg-[#2d211b] px-5 text-sm font-extrabold text-white transition hover:bg-[#44332a] active:scale-[0.99]"
@@ -288,7 +292,7 @@ export function CredentialDetail({
                       <p className="truncate text-sm font-extrabold text-black">{related.name}</p>
                       <p className="truncate text-xs font-semibold text-[#6b7280]">{relationDescription(related, credential.id)}</p>
                     </div>
-                    <button type="button" onClick={() => onOpenCredential(related.id)} className="inline-flex min-h-9 shrink-0 items-center gap-1 rounded-full px-2.5 text-xs font-extrabold text-[#d65a21] transition hover:bg-[#fff5ef]">
+                    <button type="button" onClick={() => onOpenCredential(related.id)} className="inline-flex min-h-9 shrink-0 items-center gap-1 rounded-full px-2.5 text-xs font-extrabold text-[#3976c7] transition hover:bg-[#edf4fd]">
                       Ver cuenta
                       <ArrowRight aria-hidden="true" className="size-3.5" />
                     </button>

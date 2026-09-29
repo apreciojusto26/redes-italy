@@ -8,13 +8,13 @@ import { PlatformCard } from "@/components/PlatformCard";
 import { PasswordsPage } from "@/components/passwords/PasswordsPage";
 import { ResetDayDialog } from "@/components/ResetDayDialog";
 import { SectionSwitcher, type AppSection } from "@/components/SectionSwitcher";
-import { platforms, vividiaPlatforms } from "@/config/platforms";
+import { bamzukPlatforms, platforms, vividiaPlatforms } from "@/config/platforms";
 import { useDailyPublications } from "@/hooks/useDailyPublications";
 import { getCredentials } from "@/lib/credential-api";
 import { getTodayKey } from "@/lib/dates";
 import { createDailySummary } from "@/lib/progress";
 import type { Credential } from "@/types/credential";
-import type { PlatformIcon } from "@/types/publication";
+import type { PlatformConfig, PlatformIcon, PublicationTheme } from "@/types/publication";
 
 const syncMessages = {
   loading: "Conectando con Turso…",
@@ -34,6 +34,10 @@ const vividiaSocialLinks: Partial<Record<PlatformIcon, string>> = {
   instagram: "https://www.instagram.com/vividia_oficial/",
 };
 
+const bamzukSocialLinks: Partial<Record<PlatformIcon, string>> = {
+  tiktok: "https://www.tiktok.com/@bzuk_regalos?_r=1&_t=ZG-9A8Y4dUuZkm",
+};
+
 function normalize(value: string): string {
   return value
     .normalize("NFD")
@@ -44,14 +48,19 @@ function normalize(value: string): string {
 function resolveSocialLinks(
   credentials: Credential[],
   preferredGroup: string,
+  strictGroup = false,
 ): Partial<Record<PlatformIcon, string>> {
   return Object.fromEntries(platforms.flatMap((platform) => {
-    const candidates = credentials
+    const matchingCredentials = credentials
       .filter((credential) => {
         if (!credential.url) return false;
         const searchable = normalize(`${credential.name} ${credential.platform} ${credential.url}`);
         return socialPlatformTerms[platform.icon].some((term) => searchable.includes(term));
-      })
+      });
+    const groupedCredentials = matchingCredentials.filter(
+      (credential) => normalize(credential.groupName) === normalize(preferredGroup),
+    );
+    const candidates = (strictGroup ? groupedCredentials : matchingCredentials)
       .sort((first, second) => {
         const score = (credential: Credential) =>
           (normalize(credential.groupName) === normalize(preferredGroup) ? 100 : 0) +
@@ -63,22 +72,38 @@ function resolveSocialLinks(
   })) as Partial<Record<PlatformIcon, string>>;
 }
 
+interface SocialSectionConfig {
+  brand: "bamzuk" | "italy" | "vividia";
+  platforms: PlatformConfig[];
+  theme: PublicationTheme;
+}
+
+const socialSections: Record<Exclude<AppSection, "passwords">, SocialSectionConfig> = {
+  bamzuk: { brand: "bamzuk", platforms: bamzukPlatforms, theme: "orange" },
+  social: { brand: "italy", platforms, theme: "brown" },
+  vividia: { brand: "vividia", platforms: vividiaPlatforms, theme: "green" },
+};
+
 export function Dashboard() {
-  const [activeSection, setActiveSection] = useState<AppSection>("social");
+  const [activeSection, setActiveSection] = useState<AppSection>("bamzuk");
   const [selectedDate, setSelectedDate] = useState(getTodayKey);
   const [resetDialogOpen, setResetDialogOpen] = useState(false);
   const [linkCredentials, setLinkCredentials] = useState<Credential[]>([]);
   const { checks, syncStatus, isReady, toggle, reset } = useDailyPublications(selectedDate);
-  const isVividia = activeSection === "vividia";
-  const isSocialSection = activeSection === "social" || isVividia;
-  const activePlatforms = isVividia ? vividiaPlatforms : platforms;
+  const isSocialSection = activeSection !== "passwords";
+  const socialSection = isSocialSection ? socialSections[activeSection] : socialSections.bamzuk;
+  const activePlatforms = socialSection.platforms;
   const summary = useMemo(
-    () => createDailySummary(selectedDate, checks, isVividia ? vividiaPlatforms : platforms),
-    [selectedDate, checks, isVividia],
+    () => createDailySummary(selectedDate, checks, activePlatforms),
+    [selectedDate, checks, activePlatforms],
   );
   const socialLinks = useMemo(
-    () => isVividia ? vividiaSocialLinks : resolveSocialLinks(linkCredentials, "Italy Pizza"),
-    [linkCredentials, isVividia],
+    () => activeSection === "vividia"
+      ? vividiaSocialLinks
+      : activeSection === "bamzuk"
+        ? bamzukSocialLinks
+        : resolveSocialLinks(linkCredentials, "Italy Pizza"),
+    [activeSection, linkCredentials],
   );
 
   const closeResetDialog = useCallback(() => setResetDialogOpen(false), []);
@@ -89,12 +114,13 @@ export function Dashboard() {
   }, []);
 
   useEffect(() => {
-    document.title = activeSection === "passwords"
-      ? "Contraseñas · Italy Pizza"
-      : isVividia
-        ? "Redes Vividia · Vividia"
-        : "Redes Italy · Italy Pizza";
-  }, [activeSection, isVividia]);
+    document.title = {
+      bamzuk: "Bamzuk TikTok Shop",
+      social: "Redes Italy · Italy Pizza",
+      vividia: "Redes Vividia · Vividia",
+      passwords: "Contraseñas",
+    }[activeSection];
+  }, [activeSection]);
 
   useEffect(() => {
     const controller = new AbortController();
@@ -125,18 +151,18 @@ export function Dashboard() {
         <SectionSwitcher activeSection={activeSection} onChange={setActiveSection} />
 
         <div className={isSocialSection ? "space-y-4 sm:space-y-5" : "hidden"}>
-            <Header selectedDate={selectedDate} onReset={() => setResetDialogOpen(true)} brand={isVividia ? "vividia" : "italy"} />
-            <DailyProgress completed={summary.completed} total={summary.total} percentage={summary.percentage} theme={isVividia ? "green" : "orange"} />
+            <Header selectedDate={selectedDate} onReset={() => setResetDialogOpen(true)} brand={socialSection.brand} />
+            <DailyProgress completed={summary.completed} total={summary.total} percentage={summary.percentage} theme={socialSection.theme} />
 
-            <section aria-label="Publicaciones por plataforma" className={`grid grid-cols-1 gap-4 transition-opacity duration-200 sm:gap-5 lg:grid-cols-2 ${isReady ? "opacity-100" : "pointer-events-none opacity-55"}`}>
+            <section aria-label="Publicaciones por plataforma" className={`grid grid-cols-1 gap-4 transition-opacity duration-200 sm:gap-5 ${activeSection === "bamzuk" ? "lg:grid-cols-1" : "lg:grid-cols-2"} ${isReady ? "opacity-100" : "pointer-events-none opacity-55"}`}>
               {activePlatforms.map((platform) => (
                 <PlatformCard
                   key={platform.id}
                   platform={platform}
                   checks={checks[platform.id]}
                   url={socialLinks[platform.icon]}
-                  showOpenButton={isVividia}
-                  theme={isVividia ? "green" : "orange"}
+                  showOpenButton={activeSection === "vividia"}
+                  theme={socialSection.theme}
                   disabled={!isReady}
                   onToggle={(publicationId) => toggle(platform.id, publicationId)}
                 />
@@ -145,9 +171,9 @@ export function Dashboard() {
 
             <footer className="flex items-center justify-center gap-2 pb-4 pt-2 text-center text-xs font-semibold text-black sm:text-sm" aria-live="polite">
               {syncStatus === "offline" ? (
-                <WifiOff aria-hidden="true" className="size-4 text-[#b06e4f]" />
+                <WifiOff aria-hidden="true" className={`size-4 ${socialSection.theme === "green" ? "text-[#478a50]" : socialSection.theme === "brown" ? "text-[#68483d]" : "text-[#d65a21]"}`} />
               ) : syncStatus === "loading" || syncStatus === "saving" ? (
-                <LoaderCircle aria-hidden="true" className="size-4 animate-spin text-[#d46530]" />
+                <LoaderCircle aria-hidden="true" className={`size-4 animate-spin ${socialSection.theme === "green" ? "text-[#478a50]" : socialSection.theme === "brown" ? "text-[#68483d]" : "text-[#d65a21]"}`} />
               ) : (
                 <CloudCheck aria-hidden="true" className="size-4 text-[#4c9560]" />
               )}
@@ -160,7 +186,7 @@ export function Dashboard() {
         </div>
       </div>
 
-      <ResetDayDialog open={resetDialogOpen} dateKey={selectedDate} onCancel={closeResetDialog} onConfirm={confirmReset} theme={isVividia ? "green" : "orange"} />
+      <ResetDayDialog open={resetDialogOpen} dateKey={selectedDate} onCancel={closeResetDialog} onConfirm={confirmReset} theme={socialSection.theme} />
     </main>
   );
 }

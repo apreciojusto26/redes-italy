@@ -19,9 +19,9 @@ export function CredentialGroupFilter({ groups, value, onChange, onManage }: Cre
           type="button"
           onClick={() => onChange(null)}
           aria-pressed={value === null}
-          className={`min-h-9 cursor-pointer rounded-full border px-3.5 text-xs font-extrabold transition focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-[#e66a27]/35 ${
+          className={`min-h-9 cursor-pointer rounded-full border px-3.5 text-xs font-extrabold transition focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-[#3976c7]/35 ${
             value === null
-              ? "border-[#9ca3af] bg-[#e66a27] text-white shadow-[0_5px_14px_rgba(230,106,39,0.16)]"
+              ? "border-[#9ca3af] bg-[#3976c7] text-white shadow-[0_5px_14px_rgba(38,89,166,0.18)]"
               : "border-[#d1d5db] bg-white text-black hover:border-[#9ca3af] hover:bg-[#f9fafb]"
           }`}
         >

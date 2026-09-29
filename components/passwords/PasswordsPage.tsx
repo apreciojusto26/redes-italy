@@ -15,6 +15,7 @@ import { VaultUnlock } from "@/components/passwords/VaultUnlock";
 import { useCredentials } from "@/hooks/useCredentials";
 import { useCredentialGroups } from "@/hooks/useCredentialGroups";
 import { useVault } from "@/hooks/useVault";
+import { GMAIL_INBOX_URL } from "@/config/credential-platforms";
 import type { Credential, CredentialDraft } from "@/types/credential";
 
 function normalizeSearch(value: string): string {
@@ -165,7 +166,7 @@ export function PasswordsPage() {
       platform: "Google / Gmail",
       category: "Correo",
       groupName,
-      url: "https://mail.google.com/",
+      url: GMAIL_INBOX_URL,
       provider: "google",
       loginMethod: "password",
       email,
@@ -228,7 +229,7 @@ export function PasswordsPage() {
           </div>
         ) : (
           <div>
-            <LoaderCircle aria-hidden="true" className="mx-auto size-7 animate-spin text-[#e46527]" />
+            <LoaderCircle aria-hidden="true" className="mx-auto size-7 animate-spin text-[#3976c7]" />
             <p className="mt-3 text-sm font-extrabold text-black">Desactivando la contraseña maestra…</p>
             <p className="mt-1 text-xs font-semibold text-[#6b7280]">Esto solo ocurrirá una vez.</p>
           </div>

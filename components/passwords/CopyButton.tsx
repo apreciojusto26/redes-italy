@@ -54,7 +54,7 @@ export function CopyButton({ getValue, message, onToast, disabled }: CopyButtonP
       className={`grid size-8 shrink-0 cursor-pointer place-items-center rounded-[9px] transition active:scale-95 ${
         copied
           ? "text-[#3e8550]"
-          : "text-[#6b7280] hover:bg-[#f3f4f6] hover:text-[#d65a21]"
+          : "text-[#6b7280] hover:bg-[#f3f4f6] hover:text-[#3976c7]"
       }`}
     >
       {copied ? <Check aria-hidden="true" className="size-3.5" strokeWidth={2.8} /> : <Copy aria-hidden="true" className="size-3.5" />}

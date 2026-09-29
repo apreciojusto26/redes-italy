@@ -2,7 +2,7 @@ import { CheckCircle2, ExternalLink } from "lucide-react";
 import { BrandIcon } from "@/components/BrandIcon";
 import { PublicationCheckbox } from "@/components/PublicationCheckbox";
 import { getPlatformItems, getPlatformTotal } from "@/config/platforms";
-import type { PlatformChecks, PlatformConfig, PublicationKind } from "@/types/publication";
+import type { PlatformChecks, PlatformConfig, PublicationKind, PublicationTheme } from "@/types/publication";
 
 interface PlatformCardProps {
   platform: PlatformConfig;
@@ -11,7 +11,7 @@ interface PlatformCardProps {
   disabled?: boolean;
   url?: string;
   showOpenButton?: boolean;
-  theme?: "orange" | "green";
+  theme?: PublicationTheme;
 }
 
 function PublicationGroup({
