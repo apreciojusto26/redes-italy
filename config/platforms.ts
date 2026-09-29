@@ -39,6 +39,13 @@ export const platforms: PlatformConfig[] = [
   },
 ];
 
+export const vividiaPlatforms: PlatformConfig[] = platforms.map((platform) => ({
+  ...platform,
+  id: `vividia-${platform.id}`,
+}));
+
+export const allPlatforms: PlatformConfig[] = [...platforms, ...vividiaPlatforms];
+
 function createItems(kind: PublicationKind, amount: number): PublicationItem[] {
   const noun = kind === "video" ? "Video" : "Historia";
 
@@ -65,7 +72,12 @@ export function getPlatformTotal(platform: PlatformConfig): number {
   return platform.videos + platform.stories;
 }
 
-export const dailyPublicationTotal = platforms.reduce(
-  (total, platform) => total + getPlatformTotal(platform),
-  0,
-);
+export function getDailyPublicationTotal(platformList: PlatformConfig[]): number {
+  return platformList.reduce(
+    (total, platform) => total + getPlatformTotal(platform),
+    0,
+  );
+}
+
+export const dailyPublicationTotal = getDailyPublicationTotal(platforms);
+export const vividiaDailyPublicationTotal = getDailyPublicationTotal(vividiaPlatforms);

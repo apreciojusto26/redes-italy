@@ -1,4 +1,4 @@
-import { getPlatformItems, platforms } from "@/config/platforms";
+import { allPlatforms, getPlatformItems } from "@/config/platforms";
 import type { DailyChecks } from "@/types/publication";
 
 const STORAGE_KEY = "italy-pizza:publication-control:v1";
@@ -15,7 +15,7 @@ function emptyStore(): PublicationStore {
 
 export function createEmptyDailyChecks(): DailyChecks {
   return Object.fromEntries(
-    platforms.map((platform) => [
+    allPlatforms.map((platform) => [
       platform.id,
       Object.fromEntries(getPlatformItems(platform).map((item) => [item.id, false])),
     ]),
@@ -26,7 +26,7 @@ function normalizeDay(value: unknown): DailyChecks {
   const source = value && typeof value === "object" ? (value as DailyChecks) : {};
   const empty = createEmptyDailyChecks();
 
-  for (const platform of platforms) {
+  for (const platform of allPlatforms) {
     for (const item of getPlatformItems(platform)) {
       empty[platform.id][item.id] = Boolean(source[platform.id]?.[item.id]);
     }
@@ -75,10 +75,19 @@ export const publicationStorage = {
     writeStore(store);
   },
 
-  resetDay(dateKey: string): DailyChecks {
+  resetDay(dateKey: string, platformIds?: string[]): DailyChecks {
     const store = readStore();
-    delete store.dates[dateKey];
+    if (!platformIds?.length) {
+      delete store.dates[dateKey];
+    } else {
+      const day = normalizeDay(store.dates[dateKey]);
+      const empty = createEmptyDailyChecks();
+      for (const platformId of platformIds) {
+        if (empty[platformId]) day[platformId] = empty[platformId];
+      }
+      store.dates[dateKey] = day;
+    }
     writeStore(store);
-    return createEmptyDailyChecks();
+    return normalizeDay(store.dates[dateKey]);
   },
 };

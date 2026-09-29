@@ -53,11 +53,11 @@ export async function savePublicationCheck(
   if (!response.ok) throw new Error(await readError(response));
 }
 
-export async function resetPublicationDay(dateKey: string): Promise<void> {
+export async function resetPublicationDay(dateKey: string, platformIds?: string[]): Promise<void> {
   const response = await fetch("/api/publications", {
     method: "DELETE",
     headers: { "Content-Type": "application/json" },
-    body: JSON.stringify({ dateKey }),
+    body: JSON.stringify({ dateKey, platformIds }),
   });
 
   if (!response.ok) throw new Error(await readError(response));

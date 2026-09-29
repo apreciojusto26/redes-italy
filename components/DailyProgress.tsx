@@ -4,9 +4,10 @@ interface DailyProgressProps {
   completed: number;
   total: number;
   percentage: number;
+  theme?: "orange" | "green";
 }
 
-export function DailyProgress({ completed, total, percentage }: DailyProgressProps) {
+export function DailyProgress({ completed, total, percentage, theme = "orange" }: DailyProgressProps) {
   const isComplete = total > 0 && completed === total;
 
   return (
@@ -18,7 +19,7 @@ export function DailyProgress({ completed, total, percentage }: DailyProgressPro
             {isComplete ? "Todo publicado por hoy 🎉" : "Progreso de hoy"}
           </h2>
         </div>
-        <div className={`flex shrink-0 items-center gap-2 rounded-full px-3 py-1.5 text-sm font-extrabold ${isComplete ? "bg-[#e7f4e9] text-[#367a45]" : "bg-[#f9e9dd] text-[#d85a20]"}`}>
+        <div className={`flex shrink-0 items-center gap-2 rounded-full px-3 py-1.5 text-sm font-extrabold ${isComplete || theme === "green" ? "bg-[#e7f4e9] text-[#367a45]" : "bg-[#f9e9dd] text-[#d85a20]"}`}>
           {isComplete && <CheckCircle2 aria-hidden="true" className="size-4" />}
           {percentage}% <span className="font-semibold opacity-70">({completed}/{total})</span>
         </div>
@@ -26,7 +27,7 @@ export function DailyProgress({ completed, total, percentage }: DailyProgressPro
 
       <div className="h-3 overflow-hidden rounded-full bg-[#e5e7eb]" role="progressbar" aria-label="Progreso de publicaciones" aria-valuemin={0} aria-valuemax={total} aria-valuenow={completed}>
         <div
-          className={`h-full rounded-full transition-[width,background-color] duration-500 ease-out ${isComplete ? "bg-[#54a766]" : "bg-[linear-gradient(90deg,#f18724,#e85a20)]"}`}
+          className={`h-full rounded-full transition-[width,background-color] duration-500 ease-out ${isComplete || theme === "green" ? "bg-[linear-gradient(90deg,#75ad5c,#3f8650)]" : "bg-[linear-gradient(90deg,#f18724,#e85a20)]"}`}
           style={{ width: `${percentage}%` }}
         />
       </div>

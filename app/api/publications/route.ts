@@ -1,13 +1,13 @@
 import { NextRequest, NextResponse } from "next/server";
-import { getPlatformItems, platforms } from "@/config/platforms";
+import { allPlatforms, getPlatformItems } from "@/config/platforms";
 import { getTurso, TursoConfigurationError } from "@/lib/turso";
 
 export const runtime = "nodejs";
 export const dynamic = "force-dynamic";
 
 const DATE_PATTERN = /^\d{4}-\d{2}-\d{2}$/;
-const validPublicationIds = new Map(
-  platforms.map((platform) => [platform.id, new Set(getPlatformItems(platform).map((item) => item.id))]),
+const validPublicationIds: Map<string, Set<string>> = new Map(
+  allPlatforms.map((platform) => [platform.id, new Set(getPlatformItems(platform).map((item) => item.id))]),
 );
 
 interface CheckMutation {
@@ -120,9 +120,9 @@ export async function PUT(request: NextRequest) {
 }
 
 export async function DELETE(request: NextRequest) {
-  let body: { dateKey?: unknown };
+  let body: { dateKey?: unknown; platformIds?: unknown };
   try {
-    body = (await request.json()) as { dateKey?: unknown };
+    body = (await request.json()) as { dateKey?: unknown; platformIds?: unknown };
   } catch {
     return NextResponse.json({ error: "El cuerpo de la petición no es válido." }, { status: 400 });
   }
@@ -131,12 +131,28 @@ export async function DELETE(request: NextRequest) {
     return NextResponse.json({ error: "La fecha indicada no es válida." }, { status: 400 });
   }
 
+  const platformIds = Array.isArray(body.platformIds)
+    ? [...new Set(body.platformIds.filter((id): id is string => typeof id === "string" && validPublicationIds.has(id)))]
+    : [];
+
+  if (Array.isArray(body.platformIds) && platformIds.length !== body.platformIds.length) {
+    return NextResponse.json({ error: "Las plataformas indicadas no son válidas." }, { status: 400 });
+  }
+
   try {
     const database = await getTurso();
-    await database.execute({
-      sql: "DELETE FROM publication_checks WHERE date_key = ?",
-      args: [body.dateKey],
-    });
+    if (platformIds.length > 0) {
+      const placeholders = platformIds.map(() => "?").join(", ");
+      await database.execute({
+        sql: `DELETE FROM publication_checks WHERE date_key = ? AND platform_id IN (${placeholders})`,
+        args: [body.dateKey, ...platformIds],
+      });
+    } else {
+      await database.execute({
+        sql: "DELETE FROM publication_checks WHERE date_key = ?",
+        args: [body.dateKey],
+      });
+    }
     return NextResponse.json({ ok: true });
   } catch (error) {
     return databaseError(error);

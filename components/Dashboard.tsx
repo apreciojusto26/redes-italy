@@ -8,10 +8,13 @@ import { PlatformCard } from "@/components/PlatformCard";
 import { PasswordsPage } from "@/components/passwords/PasswordsPage";
 import { ResetDayDialog } from "@/components/ResetDayDialog";
 import { SectionSwitcher, type AppSection } from "@/components/SectionSwitcher";
-import { dailyPublicationTotal, platforms } from "@/config/platforms";
+import { platforms, vividiaPlatforms } from "@/config/platforms";
 import { useDailyPublications } from "@/hooks/useDailyPublications";
+import { getCredentials } from "@/lib/credential-api";
 import { getTodayKey } from "@/lib/dates";
 import { createDailySummary } from "@/lib/progress";
+import type { Credential } from "@/types/credential";
+import type { PlatformIcon } from "@/types/publication";
 
 const syncMessages = {
   loading: "Conectando con Turso…",
@@ -20,12 +23,63 @@ const syncMessages = {
   offline: "Sin conexión con Turso. Copia guardada en este dispositivo.",
 } as const;
 
+const socialPlatformTerms: Record<PlatformIcon, string[]> = {
+  tiktok: ["tiktok"],
+  youtube: ["youtube", "youtu.be"],
+  instagram: ["instagram", "insta"],
+  facebook: ["facebook", "fb.com"],
+};
+
+const vividiaSocialLinks: Partial<Record<PlatformIcon, string>> = {
+  instagram: "https://www.instagram.com/vividia_oficial/",
+};
+
+function normalize(value: string): string {
+  return value
+    .normalize("NFD")
+    .replace(/[\u0300-\u036f]/g, "")
+    .toLocaleLowerCase("es");
+}
+
+function resolveSocialLinks(
+  credentials: Credential[],
+  preferredGroup: string,
+): Partial<Record<PlatformIcon, string>> {
+  return Object.fromEntries(platforms.flatMap((platform) => {
+    const candidates = credentials
+      .filter((credential) => {
+        if (!credential.url) return false;
+        const searchable = normalize(`${credential.name} ${credential.platform} ${credential.url}`);
+        return socialPlatformTerms[platform.icon].some((term) => searchable.includes(term));
+      })
+      .sort((first, second) => {
+        const score = (credential: Credential) =>
+          (normalize(credential.groupName) === normalize(preferredGroup) ? 100 : 0) +
+          (credential.favorite ? 10 : 0);
+        return score(second) - score(first) || second.updatedAt.localeCompare(first.updatedAt);
+      });
+
+    return candidates[0] ? [[platform.icon, candidates[0].url]] : [];
+  })) as Partial<Record<PlatformIcon, string>>;
+}
+
 export function Dashboard() {
   const [activeSection, setActiveSection] = useState<AppSection>("social");
   const [selectedDate, setSelectedDate] = useState(getTodayKey);
   const [resetDialogOpen, setResetDialogOpen] = useState(false);
+  const [linkCredentials, setLinkCredentials] = useState<Credential[]>([]);
   const { checks, syncStatus, isReady, toggle, reset } = useDailyPublications(selectedDate);
-  const summary = useMemo(() => createDailySummary(selectedDate, checks), [selectedDate, checks]);
+  const isVividia = activeSection === "vividia";
+  const isSocialSection = activeSection === "social" || isVividia;
+  const activePlatforms = isVividia ? vividiaPlatforms : platforms;
+  const summary = useMemo(
+    () => createDailySummary(selectedDate, checks, isVividia ? vividiaPlatforms : platforms),
+    [selectedDate, checks, isVividia],
+  );
+  const socialLinks = useMemo(
+    () => isVividia ? vividiaSocialLinks : resolveSocialLinks(linkCredentials, "Italy Pizza"),
+    [linkCredentials, isVividia],
+  );
 
   const closeResetDialog = useCallback(() => setResetDialogOpen(false), []);
 
@@ -37,11 +91,31 @@ export function Dashboard() {
   useEffect(() => {
     document.title = activeSection === "passwords"
       ? "Contraseñas · Italy Pizza"
-      : "Redes Italy · Italy Pizza";
+      : isVividia
+        ? "Redes Vividia · Vividia"
+        : "Redes Italy · Italy Pizza";
+  }, [activeSection, isVividia]);
+
+  useEffect(() => {
+    const controller = new AbortController();
+    const refresh = async () => {
+      try {
+        setLinkCredentials(await getCredentials(controller.signal));
+      } catch {
+        // Los enlaces son una ayuda opcional y no deben bloquear el panel diario.
+      }
+    };
+    const initialRefreshId = window.setTimeout(() => void refresh(), 0);
+    const intervalId = window.setInterval(() => void refresh(), 15_000);
+    return () => {
+      controller.abort();
+      window.clearTimeout(initialRefreshId);
+      window.clearInterval(intervalId);
+    };
   }, [activeSection]);
 
   const confirmReset = () => {
-    reset();
+    reset(activePlatforms.map((platform) => platform.id));
     setResetDialogOpen(false);
   };
 
@@ -50,16 +124,19 @@ export function Dashboard() {
       <div className="space-y-4 sm:space-y-5">
         <SectionSwitcher activeSection={activeSection} onChange={setActiveSection} />
 
-        <div className={activeSection === "social" ? "space-y-4 sm:space-y-5" : "hidden"}>
-            <Header selectedDate={selectedDate} onReset={() => setResetDialogOpen(true)} />
-            <DailyProgress completed={summary.completed} total={dailyPublicationTotal} percentage={summary.percentage} />
+        <div className={isSocialSection ? "space-y-4 sm:space-y-5" : "hidden"}>
+            <Header selectedDate={selectedDate} onReset={() => setResetDialogOpen(true)} brand={isVividia ? "vividia" : "italy"} />
+            <DailyProgress completed={summary.completed} total={summary.total} percentage={summary.percentage} theme={isVividia ? "green" : "orange"} />
 
             <section aria-label="Publicaciones por plataforma" className={`grid grid-cols-1 gap-4 transition-opacity duration-200 sm:gap-5 lg:grid-cols-2 ${isReady ? "opacity-100" : "pointer-events-none opacity-55"}`}>
-              {platforms.map((platform) => (
+              {activePlatforms.map((platform) => (
                 <PlatformCard
                   key={platform.id}
                   platform={platform}
                   checks={checks[platform.id]}
+                  url={socialLinks[platform.icon]}
+                  showOpenButton={isVividia}
+                  theme={isVividia ? "green" : "orange"}
                   disabled={!isReady}
                   onToggle={(publicationId) => toggle(platform.id, publicationId)}
                 />
@@ -83,7 +160,7 @@ export function Dashboard() {
         </div>
       </div>
 
-      <ResetDayDialog open={resetDialogOpen} dateKey={selectedDate} onCancel={closeResetDialog} onConfirm={confirmReset} />
+      <ResetDayDialog open={resetDialogOpen} dateKey={selectedDate} onCancel={closeResetDialog} onConfirm={confirmReset} theme={isVividia ? "green" : "orange"} />
     </main>
   );
 }

@@ -1,8 +1,8 @@
-import { dailyPublicationTotal, getPlatformItems, platforms } from "@/config/platforms";
-import type { DailyChecks, DailySummary } from "@/types/publication";
+import { getDailyPublicationTotal, getPlatformItems, platforms } from "@/config/platforms";
+import type { DailyChecks, DailySummary, PlatformConfig } from "@/types/publication";
 
-export function countCompleted(checks: DailyChecks): number {
-  return platforms.reduce(
+export function countCompleted(checks: DailyChecks, platformList: PlatformConfig[] = platforms): number {
+  return platformList.reduce(
     (total, platform) =>
       total +
       getPlatformItems(platform).filter((item) => checks[platform.id]?.[item.id]).length,
@@ -10,12 +10,17 @@ export function countCompleted(checks: DailyChecks): number {
   );
 }
 
-export function createDailySummary(date: string, checks: DailyChecks): DailySummary {
-  const completed = countCompleted(checks);
+export function createDailySummary(
+  date: string,
+  checks: DailyChecks,
+  platformList: PlatformConfig[] = platforms,
+): DailySummary {
+  const completed = countCompleted(checks, platformList);
+  const total = getDailyPublicationTotal(platformList);
   return {
     date,
     completed,
-    total: dailyPublicationTotal,
-    percentage: dailyPublicationTotal === 0 ? 0 : Math.round((completed / dailyPublicationTotal) * 100),
+    total,
+    percentage: total === 0 ? 0 : Math.round((completed / total) * 100),
   };
 }

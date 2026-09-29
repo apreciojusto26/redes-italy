@@ -129,8 +129,8 @@ export function useDailyPublications(dateKey: string) {
     [commitState, dateKey, enqueueMutation],
   );
 
-  const reset = useCallback(() => {
-    const empty = publicationStorage.resetDay(dateKey);
+  const reset = useCallback((platformIds?: string[]) => {
+    const empty = publicationStorage.resetDay(dateKey, platformIds);
     const current = stateRef.current;
     const nextState: DailyState = {
       ...current,
@@ -141,7 +141,7 @@ export function useDailyPublications(dateKey: string) {
     };
 
     commitState(nextState);
-    enqueueMutation(dateKey, () => resetPublicationDay(dateKey));
+    enqueueMutation(dateKey, () => resetPublicationDay(dateKey, platformIds));
   }, [commitState, dateKey, enqueueMutation]);
 
   return {

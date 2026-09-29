@@ -1,9 +1,10 @@
 export type PublicationKind = "video" | "story";
 
 export type PlatformIcon = "tiktok" | "youtube" | "instagram" | "facebook";
+export type PlatformId = string;
 
 export interface PlatformConfig {
-  id: string;
+  id: PlatformId;
   name: string;
   icon: PlatformIcon;
   videos: number;
