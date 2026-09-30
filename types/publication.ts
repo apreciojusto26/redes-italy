@@ -2,7 +2,7 @@ export type PublicationKind = "video" | "story";
 
 export type PlatformIcon = "tiktok" | "youtube" | "instagram" | "facebook";
 export type PlatformId = string;
-export type PublicationTheme = "orange" | "brown" | "green";
+export type PublicationTheme = "orange" | "brown";
 
 export interface PlatformConfig {
   id: PlatformId;

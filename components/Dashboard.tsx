@@ -8,7 +8,7 @@ import { PlatformCard } from "@/components/PlatformCard";
 import { PasswordsPage } from "@/components/passwords/PasswordsPage";
 import { ResetDayDialog } from "@/components/ResetDayDialog";
 import { SectionSwitcher, type AppSection } from "@/components/SectionSwitcher";
-import { bamzukPlatforms, platforms, vividiaPlatforms } from "@/config/platforms";
+import { bamzukPlatforms, platforms } from "@/config/platforms";
 import { useDailyPublications } from "@/hooks/useDailyPublications";
 import { getCredentials } from "@/lib/credential-api";
 import { getTodayKey } from "@/lib/dates";
@@ -28,10 +28,6 @@ const socialPlatformTerms: Record<PlatformIcon, string[]> = {
   youtube: ["youtube", "youtu.be"],
   instagram: ["instagram", "insta"],
   facebook: ["facebook", "fb.com"],
-};
-
-const vividiaSocialLinks: Partial<Record<PlatformIcon, string>> = {
-  instagram: "https://www.instagram.com/vividia_oficial/",
 };
 
 const bamzukSocialLinks: Partial<Record<PlatformIcon, string>> = {
@@ -73,7 +69,7 @@ function resolveSocialLinks(
 }
 
 interface SocialSectionConfig {
-  brand: "bamzuk" | "italy" | "vividia";
+  brand: "bamzuk" | "italy";
   platforms: PlatformConfig[];
   theme: PublicationTheme;
 }
@@ -81,7 +77,6 @@ interface SocialSectionConfig {
 const socialSections: Record<Exclude<AppSection, "passwords">, SocialSectionConfig> = {
   bamzuk: { brand: "bamzuk", platforms: bamzukPlatforms, theme: "orange" },
   social: { brand: "italy", platforms, theme: "brown" },
-  vividia: { brand: "vividia", platforms: vividiaPlatforms, theme: "green" },
 };
 
 export function Dashboard() {
@@ -98,9 +93,7 @@ export function Dashboard() {
     [selectedDate, checks, activePlatforms],
   );
   const socialLinks = useMemo(
-    () => activeSection === "vividia"
-      ? vividiaSocialLinks
-      : activeSection === "bamzuk"
+    () => activeSection === "bamzuk"
         ? bamzukSocialLinks
         : resolveSocialLinks(linkCredentials, "Italy Pizza"),
     [activeSection, linkCredentials],
@@ -117,7 +110,6 @@ export function Dashboard() {
     document.title = {
       bamzuk: "Bamzuk TikTok Shop",
       social: "Redes Italy · Italy Pizza",
-      vividia: "Redes Vividia · Vividia",
       passwords: "Contraseñas",
     }[activeSection];
   }, [activeSection]);
@@ -161,7 +153,6 @@ export function Dashboard() {
                   platform={platform}
                   checks={checks[platform.id]}
                   url={socialLinks[platform.icon]}
-                  showOpenButton={activeSection === "vividia"}
                   theme={socialSection.theme}
                   disabled={!isReady}
                   onToggle={(publicationId) => toggle(platform.id, publicationId)}
@@ -171,9 +162,9 @@ export function Dashboard() {
 
             <footer className="flex items-center justify-center gap-2 pb-4 pt-2 text-center text-xs font-semibold text-black sm:text-sm" aria-live="polite">
               {syncStatus === "offline" ? (
-                <WifiOff aria-hidden="true" className={`size-4 ${socialSection.theme === "green" ? "text-[#478a50]" : socialSection.theme === "brown" ? "text-[#68483d]" : "text-[#d65a21]"}`} />
+                <WifiOff aria-hidden="true" className={`size-4 ${socialSection.theme === "brown" ? "text-[#68483d]" : "text-[#d65a21]"}`} />
               ) : syncStatus === "loading" || syncStatus === "saving" ? (
-                <LoaderCircle aria-hidden="true" className={`size-4 animate-spin ${socialSection.theme === "green" ? "text-[#478a50]" : socialSection.theme === "brown" ? "text-[#68483d]" : "text-[#d65a21]"}`} />
+                <LoaderCircle aria-hidden="true" className={`size-4 animate-spin ${socialSection.theme === "brown" ? "text-[#68483d]" : "text-[#d65a21]"}`} />
               ) : (
                 <CloudCheck aria-hidden="true" className="size-4 text-[#4c9560]" />
               )}

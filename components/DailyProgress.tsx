@@ -19,10 +19,6 @@ export function DailyProgress({ completed, total, percentage, theme = "orange" }
       badge: "bg-[#f1ebe8] text-[#68483d]",
       bar: "bg-[linear-gradient(90deg,#85675b,#563d34)]",
     },
-    green: {
-      badge: "bg-[#e7f4e9] text-[#367a45]",
-      bar: "bg-[linear-gradient(90deg,#75ad5c,#3f8650)]",
-    },
   }[theme];
 
   return (

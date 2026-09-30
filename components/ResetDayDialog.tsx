@@ -18,7 +18,6 @@ export function ResetDayDialog({ open, dateKey, onCancel, onConfirm, theme = "or
   const resetTheme = {
     orange: { icon: "bg-[#fff0e5] text-[#df5c22]", button: "bg-[#e65e23] shadow-[0_8px_20px_rgba(218,83,27,0.2)] hover:bg-[#d9511b]" },
     brown: { icon: "bg-[#f1ebe8] text-[#68483d]", button: "bg-[#65483e] shadow-[0_8px_20px_rgba(72,48,39,0.2)] hover:bg-[#51382f]" },
-    green: { icon: "bg-[#e8f4e7] text-[#3f824d]", button: "bg-[#478a50] shadow-[0_8px_20px_rgba(63,130,77,0.2)] hover:bg-[#397844]" },
   }[theme];
 
   useEffect(() => {

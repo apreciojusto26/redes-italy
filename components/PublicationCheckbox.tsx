@@ -13,7 +13,6 @@ export function PublicationCheckbox({ item, checked, onToggle, disabled, theme =
   const checkedTheme = {
     orange: { surface: "border-[#9ca3af] bg-[#fff3e9]", box: "border-[#9ca3af] bg-[#e96123]", decoration: "decoration-[#e7a17d]" },
     brown: { surface: "border-[#9ca3af] bg-[#f6f1ee]", box: "border-[#9ca3af] bg-[#6a4b40]", decoration: "decoration-[#a88e83]" },
-    green: { surface: "border-[#9ca3af] bg-[#f0f8ef]", box: "border-[#9ca3af] bg-[#4c8c55]", decoration: "decoration-[#91b397]" },
   }[theme];
   return (
     <button

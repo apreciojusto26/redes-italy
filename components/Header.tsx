@@ -4,7 +4,7 @@ import { formatLongDate, getTodayKey } from "@/lib/dates";
 interface HeaderProps {
   selectedDate: string;
   onReset: () => void;
-  brand?: "bamzuk" | "italy" | "vividia";
+  brand?: "bamzuk" | "italy";
 }
 
 export function Header({ selectedDate, onReset, brand = "italy" }: HeaderProps) {
@@ -19,11 +19,6 @@ export function Header({ selectedDate, onReset, brand = "italy" }: HeaderProps) 
       icon: "🍕",
       name: "Italy Pizza",
       surface: "bg-[linear-gradient(135deg,#826357_0%,#65483e_52%,#493229_100%)] shadow-[0_18px_50px_rgba(72,48,39,0.18)]",
-    },
-    vividia: {
-      icon: "🌿",
-      name: "Vividia",
-      surface: "bg-[linear-gradient(135deg,#78ad5b_0%,#4d914f_52%,#327346_100%)] shadow-[0_18px_50px_rgba(52,112,66,0.18)]",
     },
   }[brand];
 
