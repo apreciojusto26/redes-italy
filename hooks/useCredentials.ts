@@ -7,7 +7,7 @@ import {
   getCredentials,
   updateCredential as updateCredentialRequest,
 } from "@/lib/credential-api";
-import { decryptPassword, passwordForStorage, PLAINTEXT_PASSWORD_IV } from "@/lib/credential-crypto";
+import { encryptPassword, PLAINTEXT_PASSWORD_IV } from "@/lib/credential-crypto";
 import type { Credential, CredentialDraft, CredentialPayload } from "@/types/credential";
 
 function payloadFromCredential(credential: Credential): CredentialPayload {
@@ -44,14 +44,14 @@ function normalizeUrl(value: string): string {
   }
 }
 
-export function useCredentials(enabled: boolean) {
+export function useCredentials(key: CryptoKey | null) {
   const [credentials, setCredentials] = useState<Credential[]>([]);
   const [loading, setLoading] = useState(false);
   const [ready, setReady] = useState(false);
   const [error, setError] = useState("");
 
   const refresh = useCallback(async (signal?: AbortSignal) => {
-    if (!enabled) return;
+    if (!key) return;
     setLoading(true);
     try {
       const items = await getCredentials(signal);
@@ -64,10 +64,10 @@ export function useCredentials(enabled: boolean) {
     } finally {
       if (!signal?.aborted) setLoading(false);
     }
-  }, [enabled]);
+  }, [key]);
 
   useEffect(() => {
-    if (!enabled) {
+    if (!key) {
       const timeoutId = window.setTimeout(() => {
         setCredentials([]);
         setReady(false);
@@ -83,20 +83,22 @@ export function useCredentials(enabled: boolean) {
       window.clearTimeout(initialRefreshId);
       window.clearInterval(intervalId);
     };
-  }, [enabled, refresh]);
+  }, [key, refresh]);
 
   const buildPayload = useCallback(async (
     draft: CredentialDraft,
     existing?: Credential,
   ): Promise<CredentialPayload> => {
+    if (!key) throw new Error("Desbloquea la bóveda antes de guardar.");
+
     const keepsOwnPassword = draft.loginMethod === "password";
     let encryptedPassword = keepsOwnPassword ? existing?.encryptedPassword ?? null : null;
     let passwordIv = keepsOwnPassword ? existing?.passwordIv ?? null : null;
 
     if (keepsOwnPassword && draft.password) {
-      const stored = passwordForStorage(draft.password);
-      encryptedPassword = stored.encryptedPassword;
-      passwordIv = stored.passwordIv;
+      const encrypted = await encryptPassword(draft.password, key);
+      encryptedPassword = encrypted.encryptedPassword;
+      passwordIv = encrypted.passwordIv;
     }
 
     const normalizedUrl = normalizeUrl(draft.url);
@@ -122,29 +124,25 @@ export function useCredentials(enabled: boolean) {
       notes: draft.notes,
       favorite: draft.favorite,
     };
-  }, []);
+  }, [key]);
 
-  const migrateToPlaintext = useCallback(async (legacyKey: CryptoKey) => {
+  const migrateToEncrypted = useCallback(async () => {
+    if (!key) throw new Error("Desbloquea la bóveda antes de cifrar las contraseñas.");
     const migrated = await Promise.all(credentials.map(async (credential) => {
-      if (!credential.encryptedPassword || !credential.passwordIv || credential.passwordIv === PLAINTEXT_PASSWORD_IV) {
+      if (!credential.encryptedPassword || credential.passwordIv !== PLAINTEXT_PASSWORD_IV) {
         return credential;
       }
 
-      const password = await decryptPassword(
-        credential.encryptedPassword,
-        credential.passwordIv,
-        legacyKey,
-      );
-      const stored = passwordForStorage(password);
+      const encrypted = await encryptPassword(credential.encryptedPassword, key);
       return updateCredentialRequest({
         ...payloadFromCredential(credential),
-        encryptedPassword: stored.encryptedPassword,
-        passwordIv: stored.passwordIv,
+        encryptedPassword: encrypted.encryptedPassword,
+        passwordIv: encrypted.passwordIv,
       });
     }));
 
     setCredentials(migrated);
-  }, [credentials]);
+  }, [credentials, key]);
 
   const create = useCallback(async (draft: CredentialDraft) => {
     const credential = await createCredentialRequest(await buildPayload(draft));
@@ -177,5 +175,9 @@ export function useCredentials(enabled: boolean) {
       })));
   }, []);
 
-  return { credentials, loading, ready, error, create, update, toggleFavorite, remove, refresh, migrateToPlaintext };
+  const requiresEncryptionMigration = credentials.some(
+    (credential) => credential.passwordIv === PLAINTEXT_PASSWORD_IV,
+  );
+
+  return { credentials, loading, ready, error, create, update, toggleFavorite, remove, refresh, migrateToEncrypted, requiresEncryptionMigration };
 }

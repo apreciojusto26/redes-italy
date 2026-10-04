@@ -102,9 +102,10 @@ export async function unlockVault(
   return key;
 }
 
-export function passwordForStorage(password: string) {
+export async function encryptPassword(password: string, key: CryptoKey) {
   if (!password) return { encryptedPassword: null, passwordIv: null };
-  return { encryptedPassword: password, passwordIv: PLAINTEXT_PASSWORD_IV };
+  const result = await encryptText(password, key);
+  return { encryptedPassword: result.ciphertext, passwordIv: result.iv };
 }
 
 export async function decryptPassword(

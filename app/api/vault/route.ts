@@ -75,13 +75,3 @@ export async function POST(request: NextRequest) {
     return databaseError(error);
   }
 }
-
-export async function DELETE() {
-  try {
-    const database = await getTurso();
-    await database.execute("DELETE FROM vault_settings WHERE id = 1");
-    return NextResponse.json({ ok: true });
-  } catch (error) {
-    return databaseError(error);
-  }
-}

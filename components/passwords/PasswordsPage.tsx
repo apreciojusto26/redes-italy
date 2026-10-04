@@ -1,7 +1,7 @@
 "use client";
 
 import { useCallback, useEffect, useMemo, useRef, useState } from "react";
-import { CloudCheck, LoaderCircle } from "lucide-react";
+import { LoaderCircle, LockKeyhole } from "lucide-react";
 import { CredentialForm } from "@/components/passwords/CredentialForm";
 import { CredentialDetail } from "@/components/passwords/CredentialDetail";
 import { CredentialGroupFilter } from "@/components/passwords/CredentialGroupFilter";
@@ -28,7 +28,7 @@ function normalizeSearch(value: string): string {
 
 export function PasswordsPage() {
   const vault = useVault();
-  const credentialsState = useCredentials(vault.status === "unlocked");
+  const credentialsState = useCredentials(vault.key);
   const groupsState = useCredentialGroups(vault.status === "unlocked");
   const [search, setSearch] = useState("");
   const [selectedGroup, setSelectedGroup] = useState<string | null>(null);
@@ -191,47 +191,53 @@ export function PasswordsPage() {
     showToast("Cuenta eliminada");
   };
 
+  const lockVault = () => {
+    migrationStarted.current = false;
+    setMigrationError("");
+    vault.lock();
+  };
+
   useEffect(() => {
     if (
       vault.status !== "unlocked" ||
-      !vault.requiresMigration ||
       !vault.key ||
       !credentialsState.ready ||
+      !credentialsState.requiresEncryptionMigration ||
       migrationStarted.current
     ) return;
 
     migrationStarted.current = true;
-    void credentialsState.migrateToPlaintext(vault.key)
-      .then(() => vault.finishDisabling())
+    void credentialsState.migrateToEncrypted()
       .catch((reason: unknown) => {
-        setMigrationError(reason instanceof Error ? reason.message : "No se pudieron convertir las contraseñas existentes.");
+        setMigrationError(reason instanceof Error ? reason.message : "No se pudieron cifrar las contraseñas existentes.");
       });
   }, [credentialsState, vault]);
 
-  if (vault.status !== "unlocked") {
+  if (vault.status !== "unlocked" || !vault.key) {
     return (
       <VaultUnlock
         status={vault.status}
         error={vault.error}
+        onSetup={vault.setup}
         onUnlock={vault.unlock}
       />
     );
   }
 
-  if (vault.requiresMigration) {
+  if (credentialsState.ready && credentialsState.requiresEncryptionMigration) {
     return (
       <div className="grid min-h-[420px] place-items-center rounded-[26px] border border-[#e5e7eb] bg-white px-5 text-center">
         {migrationError ? (
           <div className="max-w-md">
-            <p className="text-lg font-extrabold text-black">No se pudo desactivar la contraseña maestra</p>
+            <p className="text-lg font-extrabold text-black">No se pudieron cifrar las contraseñas</p>
             <p className="mt-2 text-sm font-medium leading-6 text-[#6b7280]">{migrationError}</p>
-            <p className="mt-3 text-xs font-semibold text-[#6b7280]">Recarga la página para intentarlo nuevamente. No se eliminó ninguna contraseña.</p>
+            <p className="mt-3 text-xs font-semibold text-[#6b7280]">Recarga la página para intentarlo de nuevo. No se eliminó ninguna contraseña.</p>
           </div>
         ) : (
           <div>
             <LoaderCircle aria-hidden="true" className="mx-auto size-7 animate-spin text-[#3976c7]" />
-            <p className="mt-3 text-sm font-extrabold text-black">Desactivando la contraseña maestra…</p>
-            <p className="mt-1 text-xs font-semibold text-[#6b7280]">Esto solo ocurrirá una vez.</p>
+            <p className="mt-3 text-sm font-extrabold text-black">Cifrando tus contraseñas…</p>
+            <p className="mt-1 text-xs font-semibold text-[#6b7280]">Esto solo ocurrirá una vez y no cerrará la bóveda.</p>
           </div>
         )}
       </div>
@@ -290,6 +296,7 @@ export function PasswordsPage() {
     <div className="space-y-4 sm:space-y-5">
       <PasswordsHeader
         onCreate={openCreate}
+        onLock={lockVault}
       />
       <PasswordSearch value={search} onChange={changeSearch} resultCount={visibleCredentials.length} />
       <CredentialGroupFilter groups={groups} value={activeGroup} onChange={changeGroup} onManage={() => setManageGroupsOpen(true)} />
@@ -307,8 +314,8 @@ export function PasswordsPage() {
       />
 
       <footer className="flex items-center justify-center gap-2 pb-4 pt-2 text-center text-xs font-semibold text-black sm:text-sm">
-        <CloudCheck aria-hidden="true" className="size-4 text-[#4c9560]" />
-        Tus cambios se guardan automáticamente.
+        <LockKeyhole aria-hidden="true" className="size-4 text-[#3976c7]" />
+        Bóveda cifrada · Bloqueo tras 30 minutos de inactividad.
       </footer>
 
       {formOpen && (
