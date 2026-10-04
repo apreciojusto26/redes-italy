@@ -26,7 +26,7 @@ function normalizeSearch(value: string): string {
     .trim();
 }
 
-export function PasswordsPage() {
+export function PasswordsPage({ groupRequest }: { groupRequest?: { group: string; sequence: number } | null }) {
   const vault = useVault();
   const credentialsState = useCredentials(vault.key);
   const groupsState = useCredentialGroups(vault.status === "unlocked");
@@ -41,6 +41,20 @@ export function PasswordsPage() {
   const migrationStarted = useRef(false);
   const [migrationError, setMigrationError] = useState("");
   const [manageGroupsOpen, setManageGroupsOpen] = useState(false);
+  const appliedGroupRequest = useRef<number | null>(null);
+
+  useEffect(() => {
+    if (!groupRequest || vault.status !== "unlocked" || !credentialsState.ready || !groupsState.ready || appliedGroupRequest.current === groupRequest.sequence) return;
+    const timer = window.setTimeout(() => {
+      const matchingGroup = groupsState.groups.find((group) => normalizeSearch(group.name).replace(/\s/g, "") === normalizeSearch(groupRequest.group).replace(/\s/g, ""));
+      setSelectedGroup(matchingGroup?.name ?? null);
+      setSearch(matchingGroup ? "" : groupRequest.group);
+      setSelectedCredentialId(null);
+      setFormOpen(false);
+      appliedGroupRequest.current = groupRequest.sequence;
+    }, 0);
+    return () => window.clearTimeout(timer);
+  }, [groupRequest, vault.status, credentialsState.ready, groupsState.ready, groupsState.groups]);
 
   const showToast = useCallback((message: string) => {
     setToast(message);

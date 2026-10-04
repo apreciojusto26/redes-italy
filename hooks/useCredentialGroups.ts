@@ -12,6 +12,7 @@ import type { CredentialGroupDefinition } from "@/types/credential";
 export function useCredentialGroups(enabled: boolean) {
   const [groups, setGroups] = useState<CredentialGroupDefinition[]>([]);
   const [error, setError] = useState("");
+  const [ready, setReady] = useState(false);
 
   const refresh = useCallback(async (signal?: AbortSignal) => {
     if (!enabled) return;
@@ -21,6 +22,8 @@ export function useCredentialGroups(enabled: boolean) {
     } catch (reason) {
       if (signal?.aborted) return;
       setError(reason instanceof Error ? reason.message : "No se pudieron cargar los grupos.");
+    } finally {
+      if (!signal?.aborted) setReady(true);
     }
   }, [enabled]);
 
@@ -49,5 +52,5 @@ export function useCredentialGroups(enabled: boolean) {
     await refresh();
   }, [refresh]);
 
-  return { groups, error, refresh, create, rename, remove };
+  return { groups, ready, error, refresh, create, rename, remove };
 }

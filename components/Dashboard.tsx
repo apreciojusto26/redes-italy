@@ -6,14 +6,14 @@ import { DailyProgress } from "@/components/DailyProgress";
 import { Header } from "@/components/Header";
 import { PlatformCard } from "@/components/PlatformCard";
 import { PasswordsPage } from "@/components/passwords/PasswordsPage";
+import { BusinessesPage } from "@/components/businesses/BusinessesPage";
 import { ResetDayDialog } from "@/components/ResetDayDialog";
 import { SectionSwitcher, type AppSection } from "@/components/SectionSwitcher";
 import { bamzukPlatforms, platforms } from "@/config/platforms";
 import { useDailyPublications } from "@/hooks/useDailyPublications";
-import { getCredentials } from "@/lib/credential-api";
+import type { BusinessResource } from "@/config/businesses";
 import { getTodayKey } from "@/lib/dates";
 import { createDailySummary } from "@/lib/progress";
-import type { Credential } from "@/types/credential";
 import type { PlatformConfig, PlatformIcon, PublicationTheme } from "@/types/publication";
 
 const syncMessages = {
@@ -42,7 +42,7 @@ function normalize(value: string): string {
 }
 
 function resolveSocialLinks(
-  credentials: Credential[],
+  credentials: BusinessResource[],
   preferredGroup: string,
   strictGroup = false,
 ): Partial<Record<PlatformIcon, string>> {
@@ -58,7 +58,7 @@ function resolveSocialLinks(
     );
     const candidates = (strictGroup ? groupedCredentials : matchingCredentials)
       .sort((first, second) => {
-        const score = (credential: Credential) =>
+        const score = (credential: BusinessResource) =>
           (normalize(credential.groupName) === normalize(preferredGroup) ? 100 : 0) +
           (credential.favorite ? 10 : 0);
         return score(second) - score(first) || second.updatedAt.localeCompare(first.updatedAt);
@@ -74,7 +74,7 @@ interface SocialSectionConfig {
   theme: PublicationTheme;
 }
 
-const socialSections: Record<Exclude<AppSection, "passwords">, SocialSectionConfig> = {
+const socialSections: Record<"bamzuk" | "social", SocialSectionConfig> = {
   bamzuk: { brand: "bamzuk", platforms: bamzukPlatforms, theme: "orange" },
   social: { brand: "italy", platforms, theme: "brown" },
 };
@@ -83,10 +83,11 @@ export function Dashboard() {
   const [activeSection, setActiveSection] = useState<AppSection>("bamzuk");
   const [selectedDate, setSelectedDate] = useState(getTodayKey);
   const [resetDialogOpen, setResetDialogOpen] = useState(false);
-  const [linkCredentials, setLinkCredentials] = useState<Credential[]>([]);
+  const [linkCredentials, setLinkCredentials] = useState<BusinessResource[]>([]);
+  const [passwordRequest, setPasswordRequest] = useState<{ group: string; sequence: number } | null>(null);
   const { checks, syncStatus, isReady, toggle, reset } = useDailyPublications(selectedDate);
-  const isSocialSection = activeSection !== "passwords";
-  const socialSection = isSocialSection ? socialSections[activeSection] : socialSections.bamzuk;
+  const isSocialSection = activeSection === "bamzuk" || activeSection === "social";
+  const socialSection = activeSection === "social" ? socialSections.social : socialSections.bamzuk;
   const activePlatforms = socialSection.platforms;
   const summary = useMemo(
     () => createDailySummary(selectedDate, checks, activePlatforms),
@@ -111,6 +112,7 @@ export function Dashboard() {
       bamzuk: "Bamzuk TikTok Shop",
       social: "Redes Italy · Italy Pizza",
       passwords: "Contraseñas",
+      businesses: "Mis negocios · Daniel",
     }[activeSection];
   }, [activeSection]);
 
@@ -118,7 +120,8 @@ export function Dashboard() {
     const controller = new AbortController();
     const refresh = async () => {
       try {
-        setLinkCredentials(await getCredentials(controller.signal));
+        const response = await fetch("/api/business-resources", { signal: controller.signal, cache: "no-store" });
+        if (response.ok) setLinkCredentials((await response.json()).resources);
       } catch {
         // Los enlaces son una ayuda opcional y no deben bloquear el panel diario.
       }
@@ -173,7 +176,17 @@ export function Dashboard() {
         </div>
 
         <div className={activeSection === "passwords" ? "block" : "hidden"}>
-          <PasswordsPage />
+          <PasswordsPage groupRequest={passwordRequest} />
+        </div>
+        <div className={activeSection === "businesses" ? "block" : "hidden"}>
+          <BusinessesPage active={activeSection === "businesses"} onOpenPasswords={(group) => {
+            setPasswordRequest((current) => ({ group, sequence: (current?.sequence ?? 0) + 1 }));
+            setActiveSection("passwords");
+            window.scrollTo({ top: 0, behavior: "smooth" });
+          }} onOpenPublications={(section) => {
+            setActiveSection(section);
+            window.scrollTo({ top: 0, behavior: "smooth" });
+          }} />
         </div>
       </div>
 
