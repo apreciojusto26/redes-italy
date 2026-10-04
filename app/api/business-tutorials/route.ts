@@ -33,3 +33,19 @@ export async function POST(request: NextRequest) {
     return NextResponse.json({ error: "No se pudo guardar el vídeo. Inténtalo de nuevo." }, { status: 503 });
   }
 }
+
+export async function DELETE(request: NextRequest) {
+  let body: { id?: unknown };
+  try { body = await request.json(); } catch { return NextResponse.json({ error: "Datos no válidos." }, { status: 400 }); }
+  if (typeof body.id !== "string" || !/^[0-9a-f-]{36}$/i.test(body.id)) {
+    return NextResponse.json({ error: "El vídeo indicado no es válido." }, { status: 400 });
+  }
+  try {
+    const database = await getTurso();
+    const result = await database.execute({ sql: "DELETE FROM business_tutorials WHERE id = ?", args: [body.id] });
+    if (result.rowsAffected === 0) return NextResponse.json({ error: "Este vídeo ya no existe. Actualiza la página." }, { status: 404 });
+    return NextResponse.json({ ok: true });
+  } catch {
+    return NextResponse.json({ error: "No se pudo eliminar el vídeo. Inténtalo de nuevo." }, { status: 503 });
+  }
+}
