@@ -84,6 +84,10 @@ export async function getTurso(): Promise<Client> {
           url TEXT NOT NULL,
           created_at TEXT NOT NULL DEFAULT CURRENT_TIMESTAMP
         )`,
+      `CREATE TABLE IF NOT EXISTS site_sessions (
+          token_hash TEXT PRIMARY KEY,
+          expires_at INTEGER NOT NULL
+        )`,
       `INSERT OR IGNORE INTO credential_group_settings (name, hidden, sort_order) VALUES ('Aceitera', 0, 10)`,
       `INSERT OR IGNORE INTO credential_group_settings (name, hidden, sort_order) VALUES ('Bamzuk', 0, 20)`,
       `INSERT OR IGNORE INTO credential_group_settings (name, hidden, sort_order) VALUES ('Italy Pizza', 0, 30)`,

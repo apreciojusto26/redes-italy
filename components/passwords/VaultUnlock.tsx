@@ -50,7 +50,7 @@ export function VaultUnlock({ status, error, onSetup, onUnlock }: VaultUnlockPro
       <div className="grid min-h-[420px] place-items-center rounded-[26px] border border-[#e5e7eb] bg-white">
         <div className="text-center text-black">
           <LoaderCircle aria-hidden="true" className="mx-auto size-7 animate-spin text-[#3976c7]" />
-          <p className="mt-3 text-sm font-bold">Preparando la bóveda…</p>
+          <p className="mt-3 text-sm font-bold">Preparando el acceso privado…</p>
         </div>
       </div>
     );
@@ -66,9 +66,9 @@ export function VaultUnlock({ status, error, onSetup, onUnlock }: VaultUnlockPro
         <div className="mb-5 grid size-12 place-items-center rounded-2xl border border-white/20 bg-white/15 backdrop-blur-sm">
           <LockKeyhole aria-hidden="true" className="size-6" />
         </div>
-        <p className="mb-1 text-sm font-semibold text-blue-50/85">Bóveda privada · Italy Pizza</p>
+        <p className="mb-1 text-sm font-semibold text-blue-50/85">Espacio privado de Daniel</p>
         <h1 className="text-3xl font-extrabold tracking-[-0.045em] sm:text-4xl">
-          {isSetup ? "Crear contraseña maestra" : "Desbloquear contraseñas"}
+          {isSetup ? "Crear contraseña maestra" : "Bienvenido, Daniel"}
         </h1>
       </div>
 
@@ -77,8 +77,8 @@ export function VaultUnlock({ status, error, onSetup, onUnlock }: VaultUnlockPro
           <ShieldCheck aria-hidden="true" className="mt-0.5 size-5 shrink-0 text-[#3976c7]" />
           <p className="text-sm font-medium leading-6">
             {isSetup
-              ? "Esta clave cifra todas las contraseñas. No se guarda y no puede recuperarse si la olvidas."
-              : "La clave permanece únicamente en este dispositivo mientras la bóveda está abierta."}
+              ? "Una sola clave para entrar a toda la web y cifrar tus contraseñas. Guárdala en un lugar seguro: no se puede recuperar si la olvidas."
+              : "Introduce tu contraseña maestra para entrar. Tendrás tus negocios, redes y contraseñas a mano, sin volver a escribirla al cambiar de sección."}
           </p>
         </div>
 
@@ -117,7 +117,7 @@ export function VaultUnlock({ status, error, onSetup, onUnlock }: VaultUnlockPro
 
         <button type="submit" disabled={submitting} className="mt-6 flex min-h-13 w-full items-center justify-center gap-2 rounded-2xl bg-[#3976c7] px-5 text-sm font-extrabold text-white shadow-[0_8px_20px_rgba(38,89,166,0.2)] transition hover:bg-[#2d63ad] active:scale-[0.99] disabled:opacity-60">
           {submitting && <LoaderCircle aria-hidden="true" className="size-4 animate-spin" />}
-          {isSetup ? "Crear y desbloquear bóveda" : "Desbloquear bóveda"}
+          {isSetup ? "Crear contraseña y entrar" : "Entrar a mi espacio"}
         </button>
       </form>
     </section>

@@ -9,6 +9,19 @@ export type VaultStatus = "loading" | "setup" | "locked" | "unlocked" | "error";
 
 const AUTO_LOCK_MS = 30 * 60 * 1000;
 
+async function startSiteSession(password: string) {
+  const response = await fetch("/api/site-session", {
+    method: "POST",
+    headers: { "Content-Type": "application/json" },
+    body: JSON.stringify({ password }),
+    cache: "no-store",
+  });
+  if (!response.ok) {
+    const body = await response.json();
+    throw new Error(body.error ?? "No se pudo abrir la web.");
+  }
+}
+
 export function useVault() {
   const [status, setStatus] = useState<VaultStatus>("loading");
   const [configuration, setConfiguration] = useState<VaultConfiguration | null>(null);
@@ -37,6 +50,7 @@ export function useVault() {
   const lock = useCallback(() => {
     setKey(null);
     setStatus(configuration ? "locked" : "setup");
+    void fetch("/api/site-session", { method: "DELETE", cache: "no-store" }).catch(() => {});
   }, [configuration]);
 
   useEffect(() => {
@@ -48,6 +62,12 @@ export function useVault() {
     const intervalId = window.setInterval(() => {
       if (Date.now() - lastActivity.current >= AUTO_LOCK_MS) lock();
     }, 15_000);
+    const sessionIntervalId = window.setInterval(() => {
+      if (Date.now() - lastActivity.current >= AUTO_LOCK_MS) return;
+      void fetch("/api/site-session", { cache: "no-store" })
+        .then((response) => { if (response.status === 401) lock(); })
+        .catch(() => {});
+    }, 60_000);
 
     window.addEventListener("pointerdown", registerActivity, { passive: true });
     window.addEventListener("keydown", registerActivity);
@@ -56,6 +76,7 @@ export function useVault() {
     window.addEventListener("touchstart", registerActivity, { passive: true });
     return () => {
       window.clearInterval(intervalId);
+      window.clearInterval(sessionIntervalId);
       window.removeEventListener("pointerdown", registerActivity);
       window.removeEventListener("keydown", registerActivity);
       window.removeEventListener("input", registerActivity);
@@ -69,6 +90,8 @@ export function useVault() {
     const created = await createVaultConfiguration(masterPassword);
     await saveVaultConfiguration(created.configuration);
     setConfiguration(created.configuration);
+    setStatus("locked");
+    await startSiteSession(masterPassword);
     setKey(created.key);
     lastActivity.current = Date.now();
     setStatus("unlocked");
@@ -78,6 +101,7 @@ export function useVault() {
     if (!configuration) throw new Error("La bóveda todavía no está configurada.");
     setError("");
     const unlockedKey = await unlockVault(masterPassword, configuration);
+    await startSiteSession(masterPassword);
     setKey(unlockedKey);
     lastActivity.current = Date.now();
     setStatus("unlocked");
@@ -92,3 +116,5 @@ export function useVault() {
     lock,
   };
 }
+
+export type VaultAccess = ReturnType<typeof useVault>;

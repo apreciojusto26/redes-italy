@@ -8,10 +8,10 @@ interface SectionSwitcherProps {
 }
 
 const options = [
+  { id: "businesses" as const, label: "Mis negocios", icon: BookOpen },
   { id: "bamzuk" as const, label: "Bamzuk TikTok Shop", icon: ShoppingCart },
   { id: "social" as const, label: "Italy Pizza", icon: Pizza },
   { id: "passwords" as const, label: "Contraseñas", icon: KeyRound },
-  { id: "businesses" as const, label: "Mis negocios", icon: BookOpen },
 ];
 
 const activeColors: Record<AppSection, string> = {
@@ -22,10 +22,10 @@ const activeColors: Record<AppSection, string> = {
 };
 
 const activePositions: Record<AppSection, string> = {
-  bamzuk: "translate-x-0",
-  social: "translate-x-full",
-  passwords: "translate-x-[200%]",
-  businesses: "translate-x-[300%]",
+  businesses: "translate-x-0",
+  bamzuk: "translate-x-full",
+  social: "translate-x-[200%]",
+  passwords: "translate-x-[300%]",
 };
 
 export function SectionSwitcher({ activeSection, onChange }: SectionSwitcherProps) {

@@ -1,16 +1,18 @@
 "use client";
 
 import { useCallback, useEffect, useMemo, useState } from "react";
-import { CloudCheck, LoaderCircle, WifiOff } from "lucide-react";
+import { CloudCheck, LoaderCircle, LockKeyhole, WifiOff } from "lucide-react";
 import { DailyProgress } from "@/components/DailyProgress";
 import { Header } from "@/components/Header";
 import { PlatformCard } from "@/components/PlatformCard";
 import { PasswordsPage } from "@/components/passwords/PasswordsPage";
+import { VaultUnlock } from "@/components/passwords/VaultUnlock";
 import { BusinessesPage } from "@/components/businesses/BusinessesPage";
 import { ResetDayDialog } from "@/components/ResetDayDialog";
 import { SectionSwitcher, type AppSection } from "@/components/SectionSwitcher";
 import { bamzukPlatforms, platforms } from "@/config/platforms";
 import { useDailyPublications } from "@/hooks/useDailyPublications";
+import { useVault, type VaultAccess } from "@/hooks/useVault";
 import type { BusinessResource } from "@/config/businesses";
 import { getTodayKey } from "@/lib/dates";
 import { createDailySummary } from "@/lib/progress";
@@ -80,7 +82,25 @@ const socialSections: Record<"bamzuk" | "social", SocialSectionConfig> = {
 };
 
 export function Dashboard() {
-  const [activeSection, setActiveSection] = useState<AppSection>("bamzuk");
+  const vault = useVault();
+
+  useEffect(() => {
+    if (vault.status !== "unlocked") document.title = "Acceso privado · Daniel";
+  }, [vault.status]);
+
+  if (vault.status !== "unlocked" || !vault.key) {
+    return (
+      <main className="mx-auto flex min-h-screen w-full max-w-[720px] items-center px-4 py-6 sm:px-6">
+        <div className="w-full"><VaultUnlock status={vault.status} error={vault.error} onSetup={vault.setup} onUnlock={vault.unlock} /></div>
+      </main>
+    );
+  }
+
+  return <UnlockedDashboard vault={vault} />;
+}
+
+function UnlockedDashboard({ vault }: { vault: VaultAccess }) {
+  const [activeSection, setActiveSection] = useState<AppSection>("businesses");
   const [selectedDate, setSelectedDate] = useState(getTodayKey);
   const [resetDialogOpen, setResetDialogOpen] = useState(false);
   const [linkCredentials, setLinkCredentials] = useState<BusinessResource[]>([]);
@@ -143,6 +163,10 @@ export function Dashboard() {
   return (
     <main className="mx-auto min-h-screen w-full max-w-[1180px] px-4 py-4 sm:px-6 sm:py-7 lg:px-8 lg:py-10">
       <div className="space-y-4 sm:space-y-5">
+        <div className="flex items-center justify-between gap-3 text-xs text-[#64707c]">
+          <span className="flex items-center gap-1.5"><LockKeyhole className="size-3.5" aria-hidden="true" /> Acceso privado de Daniel</span>
+          <button type="button" onClick={vault.lock} className="inline-flex min-h-11 items-center gap-2 rounded-full border border-[#d7dedb] px-4 text-sm text-[#365e55] transition hover:bg-[#f0f6f3]"><LockKeyhole className="size-4" aria-hidden="true" /> Bloquear web</button>
+        </div>
         <SectionSwitcher activeSection={activeSection} onChange={setActiveSection} />
 
         <div className={isSocialSection ? "space-y-4 sm:space-y-5" : "hidden"}>
@@ -176,7 +200,7 @@ export function Dashboard() {
         </div>
 
         <div className={activeSection === "passwords" ? "block" : "hidden"}>
-          <PasswordsPage groupRequest={passwordRequest} />
+          <PasswordsPage vault={vault} groupRequest={passwordRequest} />
         </div>
         <div className={activeSection === "businesses" ? "block" : "hidden"}>
           <BusinessesPage active={activeSection === "businesses"} onOpenPasswords={(group) => {

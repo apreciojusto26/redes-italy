@@ -11,10 +11,9 @@ import { ManageCredentialGroups } from "@/components/passwords/ManageCredentialG
 import { PasswordSearch } from "@/components/passwords/PasswordSearch";
 import { PasswordsHeader } from "@/components/passwords/PasswordsHeader";
 import { Toast } from "@/components/passwords/Toast";
-import { VaultUnlock } from "@/components/passwords/VaultUnlock";
 import { useCredentials } from "@/hooks/useCredentials";
 import { useCredentialGroups } from "@/hooks/useCredentialGroups";
-import { useVault } from "@/hooks/useVault";
+import type { VaultAccess } from "@/hooks/useVault";
 import { GMAIL_INBOX_URL } from "@/config/credential-platforms";
 import type { Credential, CredentialDraft } from "@/types/credential";
 
@@ -26,8 +25,7 @@ function normalizeSearch(value: string): string {
     .trim();
 }
 
-export function PasswordsPage({ groupRequest }: { groupRequest?: { group: string; sequence: number } | null }) {
-  const vault = useVault();
+export function PasswordsPage({ vault, groupRequest }: { vault: VaultAccess; groupRequest?: { group: string; sequence: number } | null }) {
   const credentialsState = useCredentials(vault.key);
   const groupsState = useCredentialGroups(vault.status === "unlocked");
   const [search, setSearch] = useState("");
@@ -228,14 +226,7 @@ export function PasswordsPage({ groupRequest }: { groupRequest?: { group: string
   }, [credentialsState, vault]);
 
   if (vault.status !== "unlocked" || !vault.key) {
-    return (
-      <VaultUnlock
-        status={vault.status}
-        error={vault.error}
-        onSetup={vault.setup}
-        onUnlock={vault.unlock}
-      />
-    );
+    return null;
   }
 
   if (credentialsState.ready && credentialsState.requiresEncryptionMigration) {
